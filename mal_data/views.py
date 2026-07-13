@@ -17,6 +17,8 @@ def dashboard(request):
     watching_entries = anime_entries.filter(list_status="watching")
     on_hold_entries = anime_entries.filter(list_status="on_hold")
     plan_to_watch_entries = anime_entries.filter(list_status="plan_to_watch")
+    completed_entries = anime_entries.filter(list_status="completed")
+    dropped_entries = anime_entries.filter(list_status="dropped")
     completed_rewatch_entries = anime_entries.filter(
         list_status="completed",
         is_rewatching=True,
@@ -63,6 +65,8 @@ def dashboard(request):
         "plan_to_watch_count": plan_to_watch_entries.count(),
         "on_hold_entries": on_hold_entries.order_by("-score", "-updated_at_mal")[:10],
         "plan_to_watch_entries": plan_to_watch_entries.order_by("-updated_at_mal")[:10],
+        "completed_count": completed_entries.count(),
+        "dropped_count": dropped_entries.count(),
     }
 
     return render(request, "mal_data/dashboard.html", context)
