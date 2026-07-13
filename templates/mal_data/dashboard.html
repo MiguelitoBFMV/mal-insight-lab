@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>MAL Insight Lab</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #111827;
+            color: #e5e7eb;
+            margin: 0;
+            padding: 32px;
+        }
+
+        h1 {
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #9ca3af;
+            margin-bottom: 32px;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .card {
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .card-title {
+            color: #9ca3af;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .card-value {
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .section {
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid #374151;
+            text-align: left;
+        }
+
+        th {
+            color: #93c5fd;
+            font-size: 14px;
+        }
+
+        td {
+            color: #e5e7eb;
+        }
+
+        .muted {
+            color: #9ca3af;
+        }
+
+        .badge {
+            background: #374151;
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 12px;
+        }
+
+        a {
+            color: #60a5fa;
+        }
+    </style>
+</head>
+<body>
+    <h1>MAL Insight Lab</h1>
+    <p class="subtitle">
+        Dashboard inicial para ordenar tu lista de anime desde MyAnimeList.
+    </p>
+
+    <div class="cards">
+        <div class="card">
+            <div class="card-title">Anime importados</div>
+            <div class="card-value">{{ total_anime }}</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Watching</div>
+            <div class="card-value">{{ watching_count }}</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Rewatch activos</div>
+            <div class="card-value">{{ rewatching_count }}</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Currently airing</div>
+            <div class="card-value">{{ currently_airing_count }}</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Finished airing</div>
+            <div class="card-value">{{ finished_airing_count }}</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Watching recientes</h2>
+        <p class="muted">Animes en watching actualizados durante los últimos 3 meses.</p>
+
+        {% if recent_watching_entries %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Título</th>
+                        <th>Mi estado</th>
+                        <th>Progreso</th>
+                        <th>Score</th>
+                        <th>Estado emisión</th>
+                        <th>Última actualización</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for anime in recent_watching_entries %}
+                        <tr>
+                            <td>{{ anime.title }}</td>
+                            <td><span class="badge">{{ anime.personal_status_label }}</span></td>
+                            <td>{{ anime.num_episodes_watched }}/{{ anime.num_episodes }}</td>
+                            <td>{{ anime.score }}</td>
+                            <td><span class="badge">{{ anime.airing_status }}</span></td>
+                            <td>{{ anime.updated_at_mal|date:"d M Y H:i" }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No hay watching recientes.</p>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <h2>Watching antiguos / posibles fantasma</h2>
+        <p class="muted">
+            Animes que siguen en watching, pero no se actualizan hace más de 3 meses.
+        </p>
+
+        {% if old_watching_entries %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Título</th>
+                        <th>Mi estado</th>
+                        <th>Progreso</th>
+                        <th>Score</th>
+                        <th>Estado emisión</th>
+                        <th>Última actualización</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for anime in old_watching_entries %}
+                        <tr>
+                            <td>{{ anime.title }}</td>
+                            <td><span class="badge">{{ anime.personal_status_label }}</span></td>
+                            <td>{{ anime.num_episodes_watched }}/{{ anime.num_episodes }}</td>
+                            <td>{{ anime.score }}</td>
+                            <td><span class="badge">{{ anime.airing_status }}</span></td>
+                            <td>{{ anime.updated_at_mal|date:"d M Y H:i" }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No hay watching antiguos.</p>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <h2>Casi terminados</h2>
+        <p class="muted">
+            Animes en watching con 70% o más de progreso.
+        </p>
+
+        {% if almost_finished_entries %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Título</th>
+                        <th>Mi estado</th>
+                        <th>Progreso</th>
+                        <th>Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for anime in almost_finished_entries %}
+                        <tr>
+                            <th>Título</th>
+                            <th>Mi estado</th>
+                            <th>Progreso</th>
+                            <th>Score</th>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No hay animes casi terminados por ahora.</p>
+        {% endif %}
+    </div>
+
+    <p>
+        <a href="/admin/">Ir al admin</a>
+    </p>
+</body>
+</html>

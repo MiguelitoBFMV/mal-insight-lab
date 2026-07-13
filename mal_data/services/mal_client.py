@@ -3,6 +3,7 @@ from django.conf import settings
 
 
 class MyAnimeListClient:
+    ANIME_LIST_URL = "https://api.myanimelist.net/v2/users/@me/animelist"
     MANGA_LIST_URL = "https://api.myanimelist.net/v2/users/@me/mangalist"
 
     def __init__(self):
@@ -16,7 +17,7 @@ class MyAnimeListClient:
             "Authorization": f"Bearer {self.access_token}",
         }
 
-    def fetch_manga_page(self, url, params=None):
+    def fetch_page(self, url, params=None):
         response = requests.get(
             url,
             headers=self.get_headers(),
@@ -31,6 +32,45 @@ class MyAnimeListClient:
             )
 
         return response.json()
+
+    def fetch_all_anime_by_status(self, status):
+        params = {
+            "status": status,
+            "sort": "list_updated_at",
+            "limit": 100,
+            "fields": ",".join([
+                "list_status",
+                "num_episodes",
+                "media_type",
+                "status",
+                "start_date",
+                "end_date",
+                "main_picture",
+            ]),
+        }
+
+        all_entries = []
+        next_url = self.ANIME_LIST_URL
+        page = 1
+
+        while next_url:
+            if page == 1:
+                data = self.fetch_page(next_url, params=params)
+            else:
+                data = self.fetch_page(next_url)
+
+            entries = data.get("data", [])
+            all_entries.extend(entries)
+
+            yield {
+                "page": page,
+                "entries": entries,
+                "total_accumulated": len(all_entries),
+            }
+
+            paging = data.get("paging", {})
+            next_url = paging.get("next")
+            page += 1
 
     def fetch_all_manga_by_status(self, status):
         params = {
@@ -55,9 +95,9 @@ class MyAnimeListClient:
 
         while next_url:
             if page == 1:
-                data = self.fetch_manga_page(next_url, params=params)
+                data = self.fetch_page(next_url, params=params)
             else:
-                data = self.fetch_manga_page(next_url)
+                data = self.fetch_page(next_url)
 
             entries = data.get("data", [])
             all_entries.extend(entries)
@@ -71,5 +111,3 @@ class MyAnimeListClient:
             paging = data.get("paging", {})
             next_url = paging.get("next")
             page += 1
-
-        return all_entries

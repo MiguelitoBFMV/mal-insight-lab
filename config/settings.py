@@ -19,6 +19,8 @@ SECRET_KEY = os.getenv("SECRET_KEY", "fallback-dev-key")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False") == "True"
 
+MAL_ACCESS_TOKEN = os.getenv("MAL_ACCESS_TOKEN")
+
 ALLOWED_HOSTS = []
 
 
@@ -50,7 +52,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        "DIRS": [BASE_DIR / "templates"],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
