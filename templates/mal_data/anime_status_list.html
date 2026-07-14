@@ -154,6 +154,15 @@
             color: #111827;
             font-weight: bold;
         }
+
+        th a {
+            color: #93c5fd;
+            text-decoration: none;
+        }
+
+        th a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -199,8 +208,8 @@
     {% if page_obj.paginator.num_pages > 1 %}
         <div class="pagination">
             {% if page_obj.has_previous %}
-                <a href="?page=1{% if airing_filter %}&airing={{ airing_filter }}{% endif %}">« Primera</a>
-                <a href="?page={{ page_obj.previous_page_number }}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}">‹ Anterior</a>
+                <a href="?page={{ page_obj.next_page_number }}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">« Primera</a>
+                <a href="?page={{ page_obj.next_page_number }}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">‹ Anterior</a>
             {% endif %}
 
             <span>
@@ -208,8 +217,8 @@
             </span>
 
             {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}">Siguiente ›</a>
-                <a href="?page={{ page_obj.paginator.num_pages }}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}">Última »</a>
+                <a href="?page={{ page_obj.next_page_number }}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">Siguiente ›</a>
+                <a href="?page={{ page_obj.next_page_number }}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">Última »</a>
             {% endif %}
         </div>
     {% endif %}
@@ -219,13 +228,37 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Título</th>
+                        <th>
+                            <a href="?sort={% if sort == 'title' %}-title{% else %}title{% endif %}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}">
+                                Título
+                            </a>
+                        </th>
                         <th>Mi estado</th>
-                        <th>Progreso</th>
-                        <th>Score</th>
-                        <th>Tipo</th>
-                        <th>Estado emisión</th>
-                        <th>Última actualización</th>
+                        <th>
+                            <a href="?sort={% if sort == 'title' %}-title{% else %}title{% endif %}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}">
+                                Progreso
+                            </a>
+                        </th>
+                        <th>
+                            <a href="?sort={% if sort == '-score' %}score{% else %}-score{% endif %}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}">
+                                Score
+                            </a>
+                        </th>
+                        <th>
+                            <a href="?sort={% if sort == 'media_type' %}-media_type{% else %}media_type{% endif %}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}">
+                                Tipo
+                            </a>
+                        </th>
+                        <th>
+                            <a href="?sort={% if sort == 'airing_status' %}-airing_status{% else %}airing_status{% endif %}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}">
+                                Estado emisión
+                            </a>
+                        </th>
+                        <th>
+                            <a href="?sort={% if sort == '-updated_at_mal' %}updated_at_mal{% else %}-updated_at_mal{% endif %}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}">
+                                Última actualización
+                            </a>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -263,8 +296,8 @@
     {% if page_obj.paginator.num_pages > 1 %}
         <div class="pagination">
             {% if page_obj.has_previous %}
-                <a href="?page=1{% if airing_filter %}&airing={{ airing_filter }}{% endif %}">« Primera</a>
-                <a href="?page={{ page_obj.previous_page_number }}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}">‹ Anterior</a>
+                <a href="?page={{ page_obj.next_page_number }}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">« Primera</a>
+                <a href="?page={{ page_obj.next_page_number }}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">‹ Anterior</a>
             {% endif %}
 
             <span>
@@ -272,8 +305,8 @@
             </span>
 
             {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}">Siguiente ›</a>
-                <a href="?page={{ page_obj.paginator.num_pages }}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}">Última »</a>
+                <a href="?page={{ page_obj.next_page_number }}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">Siguiente ›</a>
+                <a href="?page={{ page_obj.next_page_number }}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">Última »</a>
             {% endif %}
         </div>
     {% endif %}

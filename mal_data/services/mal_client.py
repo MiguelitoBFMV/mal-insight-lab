@@ -5,6 +5,7 @@ from django.conf import settings
 class MyAnimeListClient:
     ANIME_LIST_URL = "https://api.myanimelist.net/v2/users/@me/animelist"
     MANGA_LIST_URL = "https://api.myanimelist.net/v2/users/@me/mangalist"
+    ANIME_DETAIL_URL = "https://api.myanimelist.net/v2/anime/{anime_id}"
 
     def __init__(self):
         self.access_token = settings.MAL_ACCESS_TOKEN
@@ -111,3 +112,23 @@ class MyAnimeListClient:
             paging = data.get("paging", {})
             next_url = paging.get("next")
             page += 1
+
+    def fetch_anime_details(self, anime_id):
+        url = self.ANIME_DETAIL_URL.format(anime_id=anime_id)
+
+        params = {
+            "fields": ",".join([
+                "id",
+                "title",
+                "main_picture",
+                "media_type",
+                "status",
+                "num_episodes",
+                "start_date",
+                "end_date",
+                "related_anime",
+                "related_manga",
+            ]),
+        }
+
+        return self.fetch_page(url, params=params)

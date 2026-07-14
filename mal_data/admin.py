@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import MangaEntry, AnimeEntry
+from .models import MangaEntry, AnimeEntry, AnimeRelation
 
 
 @admin.register(MangaEntry)
@@ -54,6 +54,35 @@ class AnimeEntryAdmin(admin.ModelAdmin):
     search_fields = (
         "title",
         "mal_id",
+    )
+
+    readonly_fields = (
+        "raw_data",
+        "last_synced_at",
+    )
+
+@admin.register(AnimeRelation)
+class AnimeRelationAdmin(admin.ModelAdmin):
+    list_display = (
+        "source_title",
+        "relation_source_type",
+        "relation_type_formatted",
+        "target_title",
+        "target_local_list_status",
+        "last_synced_at",
+    )
+
+    list_filter = (
+        "relation_source_type",
+        "relation_type",
+        "target_local_list_status",
+    )
+
+    search_fields = (
+        "source_title",
+        "target_title",
+        "source_mal_id",
+        "target_mal_id",
     )
 
     readonly_fields = (

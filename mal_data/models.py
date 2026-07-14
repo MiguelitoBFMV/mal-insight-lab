@@ -104,3 +104,46 @@ class AnimeEntry(models.Model):
 
     def __str__(self):
         return f"{self.title} ({self.list_status})"
+    
+class AnimeRelation(models.Model):
+    source_anime = models.ForeignKey(
+        AnimeEntry,
+        on_delete=models.CASCADE,
+        related_name="relations",
+        blank=True,
+        null=True,
+    )
+
+    source_mal_id = models.PositiveIntegerField()
+    source_title = models.CharField(max_length=255)
+
+    target_mal_id = models.PositiveIntegerField()
+    target_title = models.CharField(max_length=255)
+
+    target_media_type = models.CharField(max_length=50, blank=True, null=True)
+    target_status = models.CharField(max_length=50, blank=True, null=True)
+    target_picture_url = models.URLField(blank=True, null=True)
+
+    relation_type = models.CharField(max_length=100)
+    relation_type_formatted = models.CharField(max_length=100, blank=True, null=True)
+
+    # anime o manga
+    relation_source_type = models.CharField(max_length=20)
+
+    # Si el target existe en tu lista local, lo guardaremos después
+    target_local_list_status = models.CharField(max_length=50, blank=True, null=True)
+
+    raw_data = models.JSONField(blank=True, null=True)
+    last_synced_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        unique_together = (
+            "source_mal_id",
+            "target_mal_id",
+            "relation_source_type",
+            "relation_type",
+        )
+        ordering = ["source_title", "relation_source_type", "relation_type", "target_title"]
+
+    def __str__(self):
+        return f"{self.source_title} → {self.relation_type_formatted or self.relation_type} → {self.target_title}"

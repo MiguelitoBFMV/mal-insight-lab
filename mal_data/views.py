@@ -102,16 +102,40 @@ def anime_status_list(request, status):
         airing_filter = None
 
     # Orden inicial según el tipo de lista
-    if status == "plan_to_watch":
-        anime_entries = anime_entries.order_by("title")
-    elif status == "completed":
-        anime_entries = anime_entries.order_by("-updated_at_mal")
-    elif status == "dropped":
-        anime_entries = anime_entries.order_by("-updated_at_mal")
-    elif status == "on_hold":
-        anime_entries = anime_entries.order_by("title")
+        sort = request.GET.get("sort")
+
+    sort = request.GET.get("sort")
+
+    allowed_sorts = {
+        "title": "title",
+        "-title": "-title",
+        "score": "score",
+        "-score": "-score",
+        "num_episodes": "num_episodes",
+        "-num_episodes": "-num_episodes",
+        "num_episodes_watched": "num_episodes_watched",
+        "-num_episodes_watched": "-num_episodes_watched",
+        "airing_status": "airing_status",
+        "-airing_status": "-airing_status",
+        "updated_at_mal": "updated_at_mal",
+        "-updated_at_mal": "-updated_at_mal",
+    }
+
+    if sort in allowed_sorts:
+        anime_entries = anime_entries.order_by(allowed_sorts[sort])
     else:
-        anime_entries = anime_entries.order_by("-updated_at_mal")
+        if status == "plan_to_watch":
+            sort = "title"
+            anime_entries = anime_entries.order_by("title")
+        elif status in {"completed", "dropped"}:
+            sort = "-updated_at_mal"
+            anime_entries = anime_entries.order_by("-updated_at_mal")
+        elif status == "on_hold":
+            sort = "title"
+            anime_entries = anime_entries.order_by("title")
+        else:
+            sort = "-updated_at_mal"
+            anime_entries = anime_entries.order_by("-updated_at_mal")
 
     paginator = Paginator(anime_entries, 50)
 
@@ -126,6 +150,9 @@ def anime_status_list(request, status):
         "total_entries": paginator.count,
         "airing_filter": airing_filter,
         "valid_airing_statuses": valid_airing_statuses,
+        "sort": sort,
+        "media_type": "media_type",
+        "-media_type": "-media_type",
     }
 
     return render(request, "mal_data/anime_status_list.html", context)
