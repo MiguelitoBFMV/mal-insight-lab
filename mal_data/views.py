@@ -6,7 +6,7 @@ from django.shortcuts import render
 from django.utils import timezone
 
 from .models import AnimeEntry, AnimeRelation
-
+from mal_data.services.anime_relations_sync import sync_anime_relations
 
 def dashboard(request):
     now = timezone.now()
@@ -160,6 +160,19 @@ def anime_status_list(request, status):
 def anime_relations_detail(request, mal_id):
     anime = AnimeEntry.objects.filter(mal_id=mal_id).first()
 
+    existing_relations = AnimeRelation.objects.filter(
+        source_mal_id=mal_id
+    ).exists()
+
+    sync_result = None
+    sync_error = None
+
+    if not existing_relations:
+        try:
+            sync_result = sync_anime_relations(mal_id)
+        except Exception as error:
+            sync_error = str(error)
+
     relations = AnimeRelation.objects.filter(
         source_mal_id=mal_id
     ).order_by(
@@ -177,6 +190,8 @@ def anime_relations_detail(request, mal_id):
         "anime_relations": anime_relations,
         "manga_relations": manga_relations,
         "total_relations": relations.count(),
+        "sync_result": sync_result,
+        "sync_error": sync_error,
     }
 
     return render(request, "mal_data/anime_relations_detail.html", context)
