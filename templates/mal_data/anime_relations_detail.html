@@ -135,17 +135,41 @@
         a {
             color: #60a5fa;
         }
+
+        .button {
+            display: inline-block;
+            margin-top: 16px;
+            padding: 10px 14px;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            background: #1e293b;
+            color: #e5e7eb;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .button:hover {
+            background: #334155;
+        }
     </style>
 </head>
 <body>
-    <div class="nav">
+    <nav class="nav">
         <a href="/">← Dashboard</a>
         <a href="/anime/status/watching/">Watching</a>
         <a href="/anime/status/plan_to_watch/">Plan to watch</a>
         <a href="/admin/mal_data/animerelation/">Admin relations</a>
-    </div>
+    </nav>
 
-    <div class="section">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="section">
+                <strong>{{ message }}</strong>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <section class="section">
         {% if anime %}
             <div class="anime-header">
                 {% if anime.main_picture_url %}
@@ -169,7 +193,14 @@
                 Este anime no está guardado como AnimeEntry local, pero sí tiene relaciones importadas.
             </p>
         {% endif %}
-    </div>
+
+        <form method="post" action="{% url 'sync_anime_relations' mal_id %}">
+            {% csrf_token %}
+            <button type="submit" class="button">
+                Actualizar relaciones desde MAL
+            </button>
+        </form>
+    </section>
 
     {% if sync_result %}
         <div class="section">
@@ -188,7 +219,7 @@
         </div>
     {% endif %}
 
-    <div class="section">
+    <section class="section">
         <h2>Related anime</h2>
         <p class="muted">Relaciones directas importadas desde MyAnimeList.</p>
 
@@ -262,9 +293,9 @@
         {% else %}
             <p>No hay related anime importados para este anime.</p>
         {% endif %}
-    </div>
+    </section>
 
-    <div class="section">
+    <section class="section">
         <h2>Related manga</h2>
         <p class="muted">Relaciones directas de manga, si MAL las entrega desde este anime.</p>
 
@@ -323,6 +354,6 @@
         {% else %}
             <p>No hay related manga importados para este anime.</p>
         {% endif %}
-    </div>
+    </section>
 </body>
 </html>

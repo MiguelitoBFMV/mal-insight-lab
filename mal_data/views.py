@@ -2,7 +2,8 @@ from datetime import timedelta
 
 from django.core.paginator import Paginator
 from django.http import Http404
-from django.shortcuts import render
+from django.contrib import messages
+from django.shortcuts import redirect, render
 from django.utils import timezone
 
 from .models import AnimeEntry, AnimeRelation
@@ -195,3 +196,26 @@ def anime_relations_detail(request, mal_id):
     }
 
     return render(request, "mal_data/anime_relations_detail.html", context)
+
+def sync_anime_relations_view(request, mal_id):
+    if request.method != "POST":
+        return redirect("anime_relations_detail", mal_id=mal_id)
+
+    try:
+        result = sync_anime_relations(mal_id)
+
+        messages.success(
+            request,
+            (
+                "Relaciones actualizadas desde MAL. "
+                f"Anime relacionados: {result['related_anime_count']} · "
+                f"Manga relacionados: {result['related_manga_count']}"
+            ),
+        )
+    except Exception as error:
+        messages.error(
+            request,
+            f"No se pudieron actualizar las relaciones: {error}",
+        )
+
+    return redirect("anime_relations_detail", mal_id=mal_id)
