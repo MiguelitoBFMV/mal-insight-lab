@@ -97,6 +97,21 @@
         Dashboard inicial para ordenar tu lista de anime desde MyAnimeList.
     </p>
 
+    <form method="post" action="{% url 'sync_anime_list' %}">
+        {% csrf_token %}
+        <button type="submit" class="button">
+            Sincronizar anime desde MAL
+        </button>
+    </form>
+
+    {% if messages %}
+        {% for message in messages %}
+            <section class="section">
+                <strong>{{ message }}</strong>
+            </section>
+        {% endfor %}
+    {% endif %}
+
     <div class="cards">
         <div class="card">
             <div class="card-title">Anime importados</div>

@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from .models import AnimeEntry, AnimeRelation
 from mal_data.services.anime_relations_sync import sync_anime_relations
+from mal_data.services.anime_list_sync import sync_all_anime_statuses
 
 def dashboard(request):
     now = timezone.now()
@@ -219,3 +220,32 @@ def sync_anime_relations_view(request, mal_id):
         )
 
     return redirect("anime_relations_detail", mal_id=mal_id)
+
+
+def sync_anime_list_view(request):
+    if request.method != "POST":
+        return redirect("dashboard")
+
+    try:
+        results = sync_all_anime_statuses()
+
+        total_entries = sum(result["total"] for result in results)
+        created_entries = sum(result["created"] for result in results)
+        updated_entries = sum(result["updated"] for result in results)
+
+        messages.success(
+            request,
+            (
+                "Lista de anime sincronizada desde MAL. "
+                f"Total MAL: {total_entries} · "
+                f"Creados: {created_entries} · "
+                f"Actualizados: {updated_entries}"
+            ),
+        )
+    except Exception as error:
+        messages.error(
+            request,
+            f"No se pudo sincronizar la lista de anime: {error}",
+        )
+
+    return redirect("dashboard")
