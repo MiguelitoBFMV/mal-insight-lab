@@ -6,7 +6,7 @@ from django.contrib import messages
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
-from .models import AnimeEntry, AnimeRelation
+from .models import AnimeEntry, AnimeRelation, AnimeSyncEvent
 from mal_data.services.anime_relations_sync import sync_anime_relations
 from mal_data.services.anime_list_sync import sync_all_anime_statuses
 
@@ -27,6 +27,51 @@ def dashboard(request):
         list_status="completed",
         is_rewatching=True,
     )
+
+    priority_source_entries = list(watching_entries) + list(completed_entries)
+
+    source_mal_ids = [anime.mal_id for anime in priority_source_entries]
+
+    sequel_relations = (
+        AnimeRelation.objects
+        .filter(
+            source_mal_id__in=source_mal_ids,
+            relation_source_type="anime",
+            relation_type="sequel",
+        )
+        .order_by("source_title", "target_title")
+    )
+
+    sequel_recommendations = []
+    seen_target_ids = set()
+
+    for relation in sequel_relations:
+        if relation.target_mal_id in seen_target_ids:
+            continue
+
+        target_anime = AnimeEntry.objects.filter(mal_id=relation.target_mal_id).first()
+
+        if target_anime and target_anime.list_status in ["completed", "watching"]:
+            continue
+
+        source_anime = AnimeEntry.objects.filter(mal_id=relation.source_mal_id).first()
+
+        recommendation = {
+            "source_title": source_anime.display_title if source_anime else relation.source_title,
+            "target_title": target_anime.display_title if target_anime else relation.target_title,
+            "target_mal_id": relation.target_mal_id,
+            "target_status": target_anime.personal_status_label if target_anime else "Not in local list",
+            "target_airing_status": (
+                target_anime.airing_status
+                if target_anime
+                else relation.target_status or "unknown"
+            ),
+        }
+
+        sequel_recommendations.append(recommendation)
+        seen_target_ids.add(relation.target_mal_id)
+
+    sequel_recommendations = sequel_recommendations[:10]
 
     currently_airing_count = anime_entries.filter(
         airing_status="currently_airing"
@@ -56,6 +101,25 @@ def dashboard(request):
         and anime.num_episodes_watched / anime.num_episodes >= 0.7
     ]
 
+    backlog_total = completed_entries.count() + plan_to_watch_entries.count()
+
+    if backlog_total > 0:
+        backlog_clear_ratio = round(completed_entries.count() / backlog_total * 100)
+    else:
+        backlog_clear_ratio = 0
+
+    spotlight_anime = (
+        watching_entries
+        .exclude(title_japanese__isnull=True)
+        .exclude(title_japanese="")
+        .order_by("-score", "-updated_at_mal")
+        .first()
+    )
+
+    latest_sync_events = (AnimeSyncEvent.objects.select_related("anime").order_by("-created_at")[:15])
+
+    last_synced_entry = anime_entries.order_by("-last_synced_at").first()
+
     context = {
         "total_anime": total_anime,
         "watching_count": watching_entries.count(),
@@ -71,6 +135,12 @@ def dashboard(request):
         "plan_to_watch_entries": plan_to_watch_entries.order_by("-updated_at_mal")[:10],
         "completed_count": completed_entries.count(),
         "dropped_count": dropped_entries.count(),
+        "backlog_clear_ratio": backlog_clear_ratio,
+        "backlog_total": backlog_total,
+        "spotlight_anime": spotlight_anime,
+        "latest_sync_events": latest_sync_events,
+        "last_synced_entry": last_synced_entry,
+        "sequel_recommendations": sequel_recommendations,
     }
 
     return render(request, "mal_data/dashboard.html", context)

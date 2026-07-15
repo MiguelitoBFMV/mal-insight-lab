@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import MangaEntry, AnimeEntry, AnimeRelation
+from .models import AnimeEntry, AnimeRelation, AnimeSyncEvent, MangaEntry
 
 
 @admin.register(MangaEntry)
@@ -89,3 +89,15 @@ class AnimeRelationAdmin(admin.ModelAdmin):
         "raw_data",
         "last_synced_at",
     )
+
+@admin.register(AnimeSyncEvent)
+class AnimeSyncEventAdmin(admin.ModelAdmin):
+    list_display = (
+        "title_snapshot",
+        "event_type",
+        "old_value",
+        "new_value",
+        "created_at",
+    )
+    list_filter = ("event_type", "created_at")
+    search_fields = ("title_snapshot", "mal_id")

@@ -1,361 +1,323 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>MAL Insight Lab</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #111827;
-            color: #e5e7eb;
-            margin: 0;
-            padding: 32px;
-        }
+{% extends "base.html" %}
 
-        h1 {
-            margin-bottom: 8px;
-        }
+{% block title %}Dashboard · MAL Insight Lab{% endblock %}
 
-        .subtitle {
-            color: #9ca3af;
-            margin-bottom: 32px;
-        }
-
-        .cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 16px;
-            margin-bottom: 32px;
-        }
-
-        .card {
-            background: #1f2937;
-            border: 1px solid #374151;
-            border-radius: 12px;
-            padding: 20px;
-        }
-
-        .card-title {
-            color: #9ca3af;
-            font-size: 14px;
-            margin-bottom: 8px;
-        }
-
-        .card-value {
-            font-size: 32px;
-            font-weight: bold;
-        }
-
-        .section {
-            background: #1f2937;
-            border: 1px solid #374151;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 24px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 12px;
-        }
-
-        th, td {
-            padding: 10px;
-            border-bottom: 1px solid #374151;
-            text-align: left;
-        }
-
-        th {
-            color: #93c5fd;
-            font-size: 14px;
-        }
-
-        td {
-            color: #e5e7eb;
-        }
-
-        .muted {
-            color: #9ca3af;
-        }
-
-        .badge {
-            background: #374151;
-            border-radius: 999px;
-            padding: 4px 10px;
-            font-size: 12px;
-        }
-
-        a {
-            color: #60a5fa;
-        }
-    </style>
-</head>
-<body>
-    <h1>MAL Insight Lab</h1>
-    <p class="subtitle">
-        Dashboard inicial para ordenar tu lista de anime desde MyAnimeList.
-    </p>
-
-    <form method="post" action="{% url 'sync_anime_list' %}">
-        {% csrf_token %}
-        <button type="submit" class="button">
-            Sincronizar anime desde MAL
-        </button>
-    </form>
-
-    {% if messages %}
-        {% for message in messages %}
-            <section class="section">
-                <strong>{{ message }}</strong>
-            </section>
-        {% endfor %}
-    {% endif %}
-
-    <div class="cards">
-        <div class="card">
-            <div class="card-title">Anime importados</div>
-            <div class="card-value">{{ total_anime }}</div>
-        </div>
-
-        <div class="card">
-            <div class="card-title">Watching</div>
-            <div class="card-value">{{ watching_count }}</div>
-            <a href="/anime/status/watching/">Ver todos</a>
-        </div>
-
-        <div class="card">
-            <div class="card-title">On hold</div>
-            <div class="card-value">{{ on_hold_count }}</div>
-            <a href="/anime/status/on_hold/">Ver todos</a>
-        </div>
-
-        <div class="card">
-            <div class="card-title">Plan to Watch</div>
-            <div class="card-value">{{ plan_to_watch_count }}</div>
-            <a href="/anime/status/on_hold/">Ver todos</a>
-        </div>
-
-        <div class="card">
-            <div class="card-title">Completed</div>
-            <div class="card-value">{{ completed_count }}</div>
-            <a href="/anime/status/completed/">Ver todos</a>
-        </div>
-
-        <div class="card">
-            <div class="card-title">Dropped</div>
-            <div class="card-value">{{ dropped_count }}</div>
-            <a href="/anime/status/dropped/">Ver todos</a>
-        </div>
-
-        <div class="card">
-            <div class="card-title">Rewatch activos</div>
-            <div class="card-value">{{ rewatching_count }}</div>
-        </div>
-
-        <div class="card">
-            <div class="card-title">Currently airing</div>
-            <div class="card-value">{{ currently_airing_count }}</div>
-        </div>
-
-        <div class="card">
-            <div class="card-title">Finished airing</div>
-            <div class="card-value">{{ finished_airing_count }}</div>
-        </div>
+{% block content %}
+<header class="hero">
+    <div class="hero-title">
+        <h1>Library Command Center</h1>
+        <p>System Status: Optimal | Source: MyAnimeList | Local DB: Active</p>
     </div>
 
-    <div class="section">
-        <h2>Watching recientes</h2>
-        <p class="muted">Animes en watching actualizados durante los últimos 3 meses.</p>
-
-        {% if recent_watching_entries %}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Título</th>
-                        <th>Mi estado</th>
-                        <th>Progreso</th>
-                        <th>Score</th>
-                        <th>Estado emisión</th>
-                        <th>Última actualización</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for anime in recent_watching_entries %}
-                        <tr>
-                            <td>
-                                <a href="/anime/{{ anime.mal_id }}/relations/">
-                                    {{ anime.display_title }}
-                                </a>
-                            </td>
-                            <td><span class="badge">{{ anime.personal_status_label }}</span></td>
-                            <td>{{ anime.num_episodes_watched }}/{{ anime.num_episodes }}</td>
-                            <td>{{ anime.score }}</td>
-                            <td><span class="badge">{{ anime.airing_status }}</span></td>
-                            <td>{{ anime.updated_at_mal|date:"d M Y H:i" }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <div class="hero-meta">
+        {% if last_synced_entry %}
+            Last Sync: {{ last_synced_entry.last_synced_at|date:"Y.m.d H:i:s" }}<br>
         {% else %}
-            <p>No hay watching recientes.</p>
+            Last Sync: Pending<br>
         {% endif %}
+        Auth Key: ***********_MAL
     </div>
+</header>
 
-    <div class="section">
-        <h2>Watching antiguos / posibles fantasma</h2>
-        <p class="muted">
-            Animes que siguen en watching, pero no se actualizan hace más de 3 meses.
-        </p>
+{% if messages %}
+    {% for message in messages %}
+        <section class="message-panel" aria-label="Mensaje del sistema">
+            <strong>{{ message }}</strong>
+        </section>
+    {% endfor %}
+{% endif %}
 
-        {% if old_watching_entries %}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Título</th>
-                        <th>Mi estado</th>
-                        <th>Progreso</th>
-                        <th>Score</th>
-                        <th>Estado emisión</th>
-                        <th>Última actualización</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for anime in old_watching_entries %}
-                        <tr>
-                            <td>
-                                <a href="{% url 'anime_relations_detail' anime.mal_id %}">
-                                    {{ anime.display_title }}
-                                </a>
-                            </td>
-                            <td><span class="badge">{{ anime.personal_status_label }}</span></td>
-                            <td>{{ anime.num_episodes_watched }}/{{ anime.num_episodes }}</td>
-                            <td>{{ anime.score }}</td>
-                            <td><span class="badge">{{ anime.airing_status }}</span></td>
-                            <td>{{ anime.updated_at_mal|date:"d M Y H:i" }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        {% else %}
-            <p>No hay watching antiguos.</p>
-        {% endif %}
-    </div>
+<div class="dashboard-grid">
+    <aside class="left-column" aria-label="Resumen del usuario y consumo">
+        <section class="panel">
+            <header class="panel-header">
+                <h2 class="panel-title">User Profile</h2>
+            </header>
 
-    <div class="section">
-        <h2>On hold para retomar</h2>
-        <p class="muted">
-            Animes pausados, ordenados por score y última actualización.
-        </p>
+            <div class="panel-body">
+                <div class="profile-row">
+                    <div class="avatar-frame">MAL</div>
+                    <div>
+                        <p class="operator-name">Miguel</p>
+                        <p class="operator-rank">Rank: Backlog Curator</p>
+                    </div>
+                </div>
 
-        {% if on_hold_entries %}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Título</th>
-                        <th>Mi estado</th>
-                        <th>Progreso</th>
-                        <th>Score</th>
-                        <th>Estado emisión</th>
-                        <th>Última actualización</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for anime in on_hold_entries %}
-                        <tr>
-                            <td>
-                                <a href="{% url 'anime_relations_detail' anime.mal_id %}">
-                                    {{ anime.display_title }}
-                                </a>
-                            </td>
-                            <td><span class="badge">{{ anime.personal_status_label }}</span></td>
-                            <td>{{ anime.num_episodes_watched }}/{{ anime.num_episodes }}</td>
-                            <td>{{ anime.score }}</td>
-                            <td><span class="badge">{{ anime.airing_status }}</span></td>
-                            <td>{{ anime.updated_at_mal|date:"d M Y H:i" }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        {% else %}
-            <p>No hay animes en on hold importados por ahora.</p>
-        {% endif %}
-    </div>
+                <div class="metric-label-row">
+                    <span>Sync Status</span>
+                    {% if messages %}
+                        <strong>Success</strong>
+                    {% else %}
+                        <strong>Ready</strong>
+                    {% endif %}
+                </div>
 
-    <div class="section">
-        <h2>Plan to watch reciente</h2>
-        <p class="muted">
-            Últimos animes agregados o actualizados en tu Plan to Watch.
-        </p>
+                <div class="progress-track" aria-hidden="true">
+                    <div class="progress-fill" style="width: 100%;"></div>
+                </div>
 
-        {% if plan_to_watch_entries %}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Título</th>
-                        <th>Mi estado</th>
-                        <th>Episodios</th>
-                        <th>Score</th>
-                        <th>Estado emisión</th>
-                        <th>Última actualización</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for anime in plan_to_watch_entries %}
-                        <tr>
-                            <td>
-                                <a href="{% url 'anime_relations_detail' anime.mal_id %}">
-                                    {{ anime.display_title }}
-                                </a>
-                            </td>
-                            <td><span class="badge">{{ anime.personal_status_label }}</span></td>
-                            <td>{{ anime.num_episodes }}</td>
-                            <td>{{ anime.score }}</td>
-                            <td><span class="badge">{{ anime.airing_status }}</span></td>
-                            <td>{{ anime.updated_at_mal|date:"d M Y H:i" }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        {% else %}
-            <p>No hay animes en plan to watch importados por ahora.</p>
-        {% endif %}
-    </div>
-    
-    <div class="section">
-        <h2>Casi terminados</h2>
-        <p class="muted">
-            Animes en watching con 70% o más de progreso.
-        </p>
+                <form method="post" action="{% url 'sync_anime_list' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="command-button">
+                        Manual Resync
+                    </button>
+                </form>
+            </div>
+        </section>
 
-        {% if almost_finished_entries %}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Título</th>
-                        <th>Mi estado</th>
-                        <th>Progreso</th>
-                        <th>Score</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for anime in almost_finished_entries %}
-                        <tr>
-                            <th>Título</th>
-                            <th>Mi estado</th>
-                            <th>Progreso</th>
-                            <th>Score</th>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        {% else %}
-            <p>No hay animes casi terminados por ahora.</p>
-        {% endif %}
-    </div>
+        <section class="panel">
+            <header class="panel-header">
+                <h2 class="panel-title">Backlog Clear Ratio</h2>
+            </header>
 
-    <p>
-        <a href="/admin/">Ir al admin</a>
-    </p>
-</body>
-</html>
+            <div class="panel-body">
+                <div class="ratio-circle" style="--value: {{ backlog_clear_ratio }}%;">
+                    <div class="ratio-inner">
+                        <div>
+                            <div class="ratio-number">{{ backlog_clear_ratio }}%</div>
+                            <div class="ratio-label">Archive Clear</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ratio-stats">
+                    <div class="ratio-stat">
+                        <span>Completed</span>
+                        <strong>{{ completed_count }}</strong>
+                    </div>
+                    <div class="ratio-stat">
+                        <span>Plan</span>
+                        <strong>{{ plan_to_watch_count }}</strong>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel">
+            <header class="panel-header">
+                <h2 class="panel-title">JP Title Signal</h2>
+            </header>
+
+            <div class="panel-body">
+                {% if spotlight_anime %}
+                    <p class="jp-title">{{ spotlight_anime.title_japanese }}</p>
+                    <p class="jp-romaji">{{ spotlight_anime.title }}</p>
+                    <p>
+                        <a class="secondary-button" href="{% url 'anime_relations_detail' spotlight_anime.mal_id %}">
+                            Show Node
+                        </a>
+                    </p>
+                {% else %}
+                    <p class="empty-state">No Japanese title signal available.</p>
+                {% endif %}
+            </div>
+        </section>
+    </aside>
+
+    <section class="center-column" aria-label="Protocolos activos">
+        <section class="panel">
+            <header class="panel-header">
+                <h2 class="panel-title">Active Protocols</h2>
+                <a class="panel-link" href="{% url 'anime_status_list' 'watching' %}">
+                    View All
+                </a>
+            </header>
+
+            <div class="panel-body">
+                {% if recent_watching_entries %}
+                    <div class="protocol-list">
+                        {% for anime in recent_watching_entries|slice:":4" %}
+                            <article class="protocol-card">
+                                {% if anime.main_picture_url %}
+                                    <img class="cover" src="{{ anime.main_picture_url }}" alt="{{ anime.display_title }}">
+                                {% else %}
+                                    <div class="cover"></div>
+                                {% endif %}
+
+                                <div>
+                                    <h3 class="protocol-title">
+                                        <a href="{% url 'anime_relations_detail' anime.mal_id %}">
+                                            {{ anime.display_title }}
+                                        </a>
+                                    </h3>
+
+                                    <div class="protocol-meta">
+                                        Episode {{ anime.num_episodes_watched }} /
+                                        {% if anime.num_episodes > 0 %}
+                                            {{ anime.num_episodes }}
+                                        {% else %}
+                                            TBD
+                                        {% endif %}
+                                        · {{ anime.media_type|default:"unknown" }}
+                                    </div>
+
+                                    <div class="protocol-progress-row">
+                                        <span>Episode Progress</span>
+                                        <strong>
+                                            {% if anime.num_episodes > 0 %}
+                                                {{ anime.num_episodes_watched }}/{{ anime.num_episodes }}
+                                            {% else %}
+                                                {{ anime.num_episodes_watched }}/TBD
+                                            {% endif %}
+                                        </strong>
+                                    </div>
+
+                                    <div class="progress-track" aria-hidden="true">
+                                        <div
+                                            class="progress-fill"
+                                            style="width:
+                                                {% if anime.num_episodes > 0 %}
+                                                    {% widthratio anime.num_episodes_watched anime.num_episodes 100 %}%
+                                                {% else %}
+                                                    8%
+                                                {% endif %}
+                                            ;"
+                                        ></div>
+                                    </div>
+
+                                    <div class="protocol-actions">
+                                        {% if anime.airing_status == "currently_airing" %}
+                                            <span class="status-pill status-live">Live</span>
+                                        {% elif anime.airing_status == "finished_airing" %}
+                                            <span class="status-pill status-paused">Anime Finished</span>
+                                        {% elif anime.airing_status == "not_yet_aired" %}
+                                            <span class="status-pill status-paused">Paused</span>
+                                        {% else %}
+                                            <span class="status-pill status-paused">{{ anime.airing_status|default:"Unknown" }}</span>
+                                        {% endif %}
+
+                                        <a class="secondary-button" href="{% url 'anime_relations_detail' anime.mal_id %}">
+                                            Details
+                                        </a>
+                                    </div>
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="empty-state">No active watching protocols detected.</p>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="panel">
+            <header class="panel-header">
+                <h2 class="panel-title">Library Nodes</h2>
+            </header>
+
+            <div class="panel-body">
+                <div class="stats-grid">
+                    <article class="stat-card">
+                        <span>Total</span>
+                        <strong>{{ total_anime }}</strong>
+                    </article>
+                    <article class="stat-card">
+                        <span>Watching</span>
+                        <strong>{{ watching_count }}</strong>
+                    </article>
+                    <article class="stat-card">
+                        <span>On Hold</span>
+                        <strong>{{ on_hold_count }}</strong>
+                    </article>
+                    <article class="stat-card">
+                        <span>Dropped</span>
+                        <strong>{{ dropped_count }}</strong>
+                    </article>
+                    <article class="stat-card">
+                        <span>Completed</span>
+                        <strong>{{ completed_count }}</strong>
+                    </article>
+                    <article class="stat-card">
+                        <span>Rewatch</span>
+                        <strong>{{ rewatching_count }}</strong>
+                    </article>
+                    <article class="stat-card">
+                        <span>Airing</span>
+                        <strong>{{ currently_airing_count }}</strong>
+                    </article>
+                    <article class="stat-card">
+                        <span>Finished</span>
+                        <strong>{{ finished_airing_count }}</strong>
+                    </article>
+                </div>
+            </div>
+        </section>
+    </section>
+
+    <aside class="right-column" aria-label="Registros recientes">
+        <section class="panel">
+            <header class="panel-header">
+                <h2 class="panel-title">Command Logs</h2>
+            </header>
+
+            <div class="panel-body">
+                <div class="command-log-scroll">
+                    {% if latest_sync_events %}
+                        <ul class="command-log">
+                            {% for event in latest_sync_events %}
+                                <li>
+                                    <time>[{{ event.created_at|date:"H:i:s" }}]</time>
+
+                                    {% if event.anime %}
+                                        <a href="{% url 'anime_relations_detail' event.anime.mal_id %}">
+                                            &gt;&gt;&gt;
+                                            {% if event.event_type == "episode_changed" %}
+                                                EP_UPDATE:
+                                            {% elif event.event_type == "status_changed" %}
+                                                STATUS_UPDATE:
+                                            {% elif event.event_type == "score_changed" %}
+                                                SCORE_UPDATE:
+                                            {% elif event.event_type == "created" %}
+                                                NEW_ENTRY:
+                                            {% else %}
+                                                UPDATE:
+                                            {% endif %}
+                                            {{ event.title_snapshot }}
+                                            [{{ event.old_value }} → {{ event.new_value }}]
+                                        </a>
+                                    {% else %}
+                                        &gt;&gt;&gt; {{ event.title_snapshot }} [{{ event.old_value }} → {{ event.new_value }}]
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="empty-state">No command logs available.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+
+        <section class="panel">
+            <header class="panel-header">
+                <h2 class="panel-title">Sequel Radar</h2>
+            </header>
+
+            <div class="panel-body">
+                <div class="command-log-scroll">
+                    {% if sequel_recommendations %}
+                        <ul class="command-log">
+                            {% for recommendation in sequel_recommendations %}
+                                <li>
+                                    <a href="{% url 'anime_relations_detail' recommendation.target_mal_id %}">
+                                        &gt;&gt;&gt; NEXT_SIGNAL:
+                                        {{ recommendation.target_title }}
+                                    </a>
+
+                                    <div class="log-subtext">
+                                        {{ recommendation.target_status|upper }} · {{ recommendation.target_airing_status|upper }}
+                                    </div>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="empty-state">
+                            No sequel signals detected. Import relations from completed/watching anime to improve radar.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+    </aside>
+</div>
+{% endblock %}

@@ -220,3 +220,31 @@ class AnimeRelation(models.Model):
 
     def __str__(self):
         return f"{self.source_title} → {self.relation_type_formatted or self.relation_type} → {self.target_title}"
+    
+class AnimeSyncEvent(models.Model):
+    EVENT_TYPES = [
+        ("created", "Created"),
+        ("status_changed", "Status changed"),
+        ("episode_changed", "Episode changed"),
+        ("score_changed", "Score changed"),
+    ]
+
+    anime = models.ForeignKey(
+        AnimeEntry,
+        on_delete=models.CASCADE,
+        related_name="sync_events",
+        blank=True,
+        null=True,
+    )
+    mal_id = models.PositiveIntegerField()
+    title_snapshot = models.CharField(max_length=255)
+    event_type = models.CharField(max_length=50, choices=EVENT_TYPES)
+    old_value = models.CharField(max_length=100, blank=True, null=True)
+    new_value = models.CharField(max_length=100, blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.title_snapshot} · {self.event_type}: {self.old_value} → {self.new_value}"
