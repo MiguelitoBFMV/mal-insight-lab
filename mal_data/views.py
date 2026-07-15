@@ -28,6 +28,12 @@ def dashboard(request):
         is_rewatching=True,
     )
 
+    broadcast_watchlist_entries = (
+        plan_to_watch_entries
+        .filter(airing_status="currently_airing")
+        .order_by("-updated_at_mal", "title")[:10]
+    )
+
     priority_source_entries = list(watching_entries) + list(completed_entries)
 
     source_mal_ids = [anime.mal_id for anime in priority_source_entries]
@@ -45,11 +51,18 @@ def dashboard(request):
     sequel_recommendations = []
     seen_target_ids = set()
 
+    broadcast_watchlist_ids = set(
+        broadcast_watchlist_entries.values_list("mal_id", flat=True)
+    )
+
     for relation in sequel_relations:
         if relation.target_mal_id in seen_target_ids:
             continue
 
         target_anime = AnimeEntry.objects.filter(mal_id=relation.target_mal_id).first()
+
+        if target_anime and target_anime.mal_id in broadcast_watchlist_ids:
+            continue
 
         if target_anime and target_anime.list_status in ["completed", "watching"]:
             continue
@@ -141,6 +154,7 @@ def dashboard(request):
         "latest_sync_events": latest_sync_events,
         "last_synced_entry": last_synced_entry,
         "sequel_recommendations": sequel_recommendations,
+        "broadcast_watchlist_entries": broadcast_watchlist_entries,
     }
 
     return render(request, "mal_data/dashboard.html", context)

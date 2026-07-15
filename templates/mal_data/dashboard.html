@@ -318,6 +318,47 @@
                 </div>
             </div>
         </section>
+
+        <section class="panel">
+            <header class="panel-header">
+                <h2 class="panel-title">Broadcast Watchlist</h2>
+            </header>
+
+            <div class="panel-body">
+                <div class="command-log-scroll">
+                    {% if broadcast_watchlist_entries %}
+                        <ul class="command-log">
+                            {% for anime in broadcast_watchlist_entries %}
+                                <li>
+                                    <a href="{% url 'anime_relations_detail' anime.mal_id %}">
+                                        &gt;&gt;&gt; AIRING_ALERT:
+                                        {{ anime.display_title }}
+                                    </a>
+
+                                    <div class="log-subtext">
+                                        PLAN TO WATCH · CURRENTLY AIRING
+                                    </div>
+
+                                    <div class="log-subtext">
+                                        PROGRESS:
+                                        {{ anime.num_episodes_watched }}/
+                                        {% if anime.num_episodes > 0 %}
+                                            {{ anime.num_episodes }}
+                                        {% else %}
+                                            TBD
+                                        {% endif %}
+                                    </div>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="empty-state">
+                            Broadcast queue clear. All airing targets are already under watch.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
     </aside>
 </div>
 {% endblock %}
