@@ -289,3 +289,31 @@ class AnimeAiringData(models.Model):
 
     def __str__(self):
         return f"{self.anime.title} · AniList airing data"
+    
+class ManualTrackedAnime(models.Model):
+    STATUS_CHOICES = [
+        ("watching", "Watching"),
+        ("completed", "Completed"),
+        ("on_hold", "On hold"),
+        ("dropped", "Dropped"),
+        ("plan_to_watch", "Plan to watch"),
+    ]
+
+    mal_id = models.PositiveIntegerField(unique=True)
+    title_snapshot = models.CharField(max_length=255, blank=True, null=True)
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES)
+    episodes_watched = models.PositiveIntegerField(default=0)
+    score = models.PositiveIntegerField(default=0)
+    is_rewatching = models.BooleanField(default=False)
+    active = models.BooleanField(default=True)
+    notes = models.TextField(blank=True, null=True)
+
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["title_snapshot", "mal_id"]
+
+    def __str__(self):
+        title = self.title_snapshot or f"MAL ID {self.mal_id}"
+        return f"{title} ({self.status})"

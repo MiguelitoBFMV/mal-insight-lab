@@ -9,6 +9,8 @@ from django.utils import timezone
 from .models import AnimeAiringData, AnimeEntry, AnimeRelation, AnimeSyncEvent
 from mal_data.services.anime_relations_sync import sync_anime_relations
 from mal_data.services.anime_list_sync import sync_all_anime_statuses
+from mal_data.services.anilist_airing_sync import sync_airing_data_for_dashboard
+from mal_data.services.manual_tracked_sync import sync_manual_tracked_anime_entries
 
 def dashboard(request):
     now = timezone.now()
@@ -368,19 +370,31 @@ def sync_anime_list_view(request):
         created_entries = sum(result["created"] for result in results)
         updated_entries = sum(result["updated"] for result in results)
 
+        manual_results = sync_manual_tracked_anime_entries()
+        manual_ok_count = sum(1 for result in manual_results if result["ok"])
+        manual_error_count = sum(1 for result in manual_results if not result["ok"])
+
+        airing_results = sync_airing_data_for_dashboard()
+        airing_ok_count = sum(1 for result in airing_results if result["ok"])
+        airing_error_count = sum(1 for result in airing_results if not result["ok"])
+
         messages.success(
             request,
             (
-                "Lista de anime sincronizada desde MAL. "
-                f"Total MAL: {total_entries} · "
-                f"Creados: {created_entries} · "
-                f"Actualizados: {updated_entries}"
+                "Anime data synchronized from MAL, manual tracked entries and AniList. "
+                f"MAL total: {total_entries} · "
+                f"Created: {created_entries} · "
+                f"Updated: {updated_entries} · "
+                f"Manual tracked OK: {manual_ok_count} · "
+                f"Manual tracked errors: {manual_error_count} · "
+                f"Airing OK: {airing_ok_count} · "
+                f"Airing errors: {airing_error_count}"
             ),
         )
     except Exception as error:
         messages.error(
             request,
-            f"No se pudo sincronizar la lista de anime: {error}",
+            f"Anime sync failed: {error}",
         )
 
     return redirect("dashboard")

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import AnimeAiringData, AnimeEntry, AnimeRelation, AnimeSyncEvent, MangaEntry
+from .models import AnimeAiringData, AnimeEntry, AnimeRelation, AnimeSyncEvent, MangaEntry, ManualTrackedAnime
 
 
 @admin.register(MangaEntry)
@@ -117,3 +117,17 @@ class AnimeAiringDataAdmin(admin.ModelAdmin):
     list_filter = ("anilist_status", "last_synced_at")
     search_fields = ("anime__title", "mal_id", "anilist_id")
     readonly_fields = ("raw_data", "streaming_links", "streaming_episodes")
+
+@admin.register(ManualTrackedAnime)
+class ManualTrackedAnimeAdmin(admin.ModelAdmin):
+    list_display = (
+        "title_snapshot",
+        "mal_id",
+        "status",
+        "episodes_watched",
+        "score",
+        "active",
+        "updated_at",
+    )
+    list_filter = ("status", "active")
+    search_fields = ("title_snapshot", "mal_id")

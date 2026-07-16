@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from mal_data.models import AnimeEntry
+from mal_data.models import AnimeEntry, ManualTrackedAnime
 from mal_data.services.anilist_airing_sync import sync_airing_data_for_anime
 from mal_data.services.mal_client import MyAnimeListClient
 from mal_data.services.anime_list_sync import parse_date
@@ -99,6 +99,18 @@ class Command(BaseCommand):
                     },
                 },
                 "last_synced_at": timezone.now(),
+            },
+        )
+
+        ManualTrackedAnime.objects.update_or_create(
+            mal_id=anime_id,
+            defaults={
+                "title_snapshot": anime.display_title,
+                "status": status,
+                "episodes_watched": episodes_watched,
+                "score": score,
+                "is_rewatching": False,
+                "active": True,
             },
         )
 
