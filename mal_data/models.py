@@ -35,15 +35,15 @@ class MangaEntry(models.Model):
 
     @property
     def personal_status_label(self):
-        if self.is_rewatching:
-            return "Rewatching"
+        if self.is_rereading:
+            return "Rereading"
 
         status_labels = {
-            "watching": "Watching",
+            "reading": "Reading",
             "completed": "Completed",
             "on_hold": "On hold",
             "dropped": "Dropped",
-            "plan_to_watch": "Plan to watch",
+            "plan_to_read": "Plan to read",
         }
 
         return status_labels.get(self.list_status, self.list_status)
