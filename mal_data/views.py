@@ -6,12 +6,20 @@ from django.contrib import messages
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
-from .models import AnimeAiringData, AnimeEntry, AnimeRelation, AnimeSyncEvent, ManualTrackedAnime
+from mal_data.models import (
+    AnimeAiringData,
+    AnimeEntry,
+    AnimeMetadata,
+    AnimeRelation,
+    AnimeSyncEvent,
+    ManualTrackedAnime,
+)
 from mal_data.services.anime_relations_sync import sync_anime_relations
 from mal_data.services.anime_list_sync import sync_all_anime_statuses
 from mal_data.services.anilist_airing_sync import sync_airing_data_for_dashboard
 from mal_data.services.anilist_client import AniListClient
 from mal_data.services.manual_tracked_sync import sync_manual_tracked_anime_entries, sync_manual_tracked_anime_entry
+from mal_data.services.anime_metadata_sync import sync_anime_metadata
 
 def dashboard(request):
     now = timezone.now()
@@ -215,7 +223,6 @@ def dashboard(request):
 
     return render(request, "mal_data/dashboard.html", context)
 
-
 def anime_status_list(request, status):
     valid_statuses = {
         "watching": "Watching",
@@ -299,6 +306,16 @@ def anime_status_list(request, status):
 
 def anime_relations_detail(request, mal_id):
     anime = AnimeEntry.objects.filter(mal_id=mal_id).first()
+    anime_metadata = None
+
+    if anime is None:
+        anime_metadata = AnimeMetadata.objects.filter(mal_id=mal_id).first()
+
+        if anime_metadata is None:
+            try:
+                anime_metadata, _ = sync_anime_metadata(mal_id)
+            except Exception:
+                anime_metadata = None
 
     existing_relations = AnimeRelation.objects.filter(
         source_mal_id=mal_id
@@ -392,6 +409,22 @@ def anime_relations_detail(request, mal_id):
         for relation in relations
         if relation.relation_source_type == "manga"
     ]
+
+    if anime:
+        source_title = anime.display_title
+        source_picture_url = anime.main_picture_url
+        source_status = anime.personal_status_label
+        source_progress = f"{anime.num_episodes_watched} / {anime.num_episodes or 'TBD'}"
+    elif anime_metadata:
+        source_title = anime_metadata.display_title
+        source_picture_url = anime_metadata.main_picture_url
+        source_status = "Not local"
+        source_progress = f"- / {anime_metadata.num_episodes or 'TBD'}"
+    else:
+        source_title = "Unknown Source Node"
+        source_picture_url = ""
+        source_status = "Unknown"
+        source_progress = "-"
     
     context = {
         "anime": anime,
@@ -401,6 +434,10 @@ def anime_relations_detail(request, mal_id):
         "total_relations": len(relations),
         "sync_result": sync_result,
         "sync_error": sync_error,
+        "source_title": source_title,
+        "source_picture_url": source_picture_url,
+        "source_status": source_status,
+        "source_progress": source_progress,
     }
 
     return render(request, "mal_data/anime_relations_detail.html", context)
@@ -427,7 +464,6 @@ def sync_anime_relations_view(request, mal_id):
         )
 
     return redirect("anime_relations_detail", mal_id=mal_id)
-
 
 def sync_anime_list_view(request):
     if request.method != "POST":
@@ -541,7 +577,6 @@ def anime_search_view(request):
     }
 
     return render(request, "mal_data/anime_search.html", context)
-
 
 def rescue_anime_from_search_view(request):
     if request.method != "POST":

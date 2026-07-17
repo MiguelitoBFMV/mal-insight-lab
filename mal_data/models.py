@@ -317,3 +317,32 @@ class ManualTrackedAnime(models.Model):
     def __str__(self):
         title = self.title_snapshot or f"MAL ID {self.mal_id}"
         return f"{title} ({self.status})"
+    
+
+class AnimeMetadata(models.Model):
+    mal_id = models.PositiveIntegerField(unique=True)
+    title = models.CharField(max_length=255)
+    title_japanese = models.CharField(max_length=255, blank=True)
+    title_english = models.CharField(max_length=255, blank=True)
+    main_picture_url = models.URLField(blank=True)
+
+    media_type = models.CharField(max_length=50, blank=True)
+    airing_status = models.CharField(max_length=50, blank=True)
+    num_episodes = models.PositiveIntegerField(default=0)
+
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+
+    raw_data = models.JSONField(default=dict, blank=True)
+    last_synced_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["title"]
+
+    def __str__(self):
+        return f"{self.title} ({self.mal_id})"
+
+    @property
+    def display_title(self):
+        return self.title_english or self.title or self.title_japanese or f"MAL #{self.mal_id}"
+
