@@ -24,11 +24,23 @@ def sync_anime_metadata(mal_id):
             "media_type": data.get("media_type", ""),
             "airing_status": data.get("status", ""),
             "num_episodes": data.get("num_episodes") or 0,
-            "start_date": start_date,
-            "end_date": end_date,
+            "start_date" : normalize_mal_date(data.get("start_date")),
+            "end_date" : normalize_mal_date(data.get("end_date")),
             "raw_data": data,
             "last_synced_at": timezone.now(),
         },
     )
 
     return metadata, created
+
+def normalize_mal_date(value):
+    if not value:
+        return None
+
+    if len(value) == 4:
+        return f"{value}-01-01"
+
+    if len(value) == 7:
+        return f"{value}-01"
+
+    return value

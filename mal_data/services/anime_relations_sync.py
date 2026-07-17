@@ -4,7 +4,7 @@ from datetime import datetime
 from django.conf import settings
 from django.utils import timezone
 
-from mal_data.models import AnimeEntry, AnimeRelation, MangaEntry
+from mal_data.models import AnimeEntry, AnimeMetadata, AnimeRelation, MangaEntry
 from mal_data.services.mal_client import MyAnimeListClient
 
 
@@ -50,7 +50,6 @@ def sync_anime_relations(anime_id, save_raw=True):
         "manga_updated": manga_updated,
     }
 
-
 def save_raw_json(anime_id, data):
     raw_dir = settings.BASE_DIR / "data" / "raw"
     raw_dir.mkdir(parents=True, exist_ok=True)
@@ -62,7 +61,6 @@ def save_raw_json(anime_id, data):
         json.dump(data, file, indent=2, ensure_ascii=False)
 
     return output_file
-
 
 def save_relations(
     source_anime,
@@ -83,6 +81,9 @@ def save_relations(
 
         if target_mal_id is None:
             continue
+        
+        if relation_source_type == "anime":
+            save_anime_metadata_from_relation_node(node)
 
         target_local_list_status = get_target_local_status(
             target_mal_id=target_mal_id,
@@ -117,7 +118,6 @@ def save_relations(
 
     return created_count, updated_count
 
-
 def get_target_local_status(target_mal_id, relation_source_type):
     if relation_source_type == "anime":
         target = AnimeEntry.objects.filter(mal_id=target_mal_id).first()
@@ -128,3 +128,44 @@ def get_target_local_status(target_mal_id, relation_source_type):
         return target.list_status if target else ""
 
     return ""
+
+def save_anime_metadata_from_relation_node(node):
+    main_picture = node.get("main_picture") or {}
+    alternative_titles = node.get("alternative_titles") or {}
+
+    mal_id = node.get("id")
+    title = node.get("title") or ""
+
+    if mal_id is None:
+        return None
+
+    metadata, _ = AnimeMetadata.objects.update_or_create(
+        mal_id=mal_id,
+        defaults={
+            "title": title,
+            "title_japanese": alternative_titles.get("ja", ""),
+            "title_english": alternative_titles.get("en", ""),
+            "main_picture_url": main_picture.get("large") or main_picture.get("medium") or "",
+            "media_type": node.get("media_type") or "",
+            "airing_status": node.get("status") or "",
+            "num_episodes": node.get("num_episodes") or 0,
+            "start_date": normalize_mal_date(node.get("start_date")),
+            "end_date": normalize_mal_date(node.get("end_date")),
+            "raw_data": node,
+            "last_synced_at": timezone.now(),
+        },
+    )
+
+    return metadata
+
+def normalize_mal_date(value):
+    if not value:
+        return None
+
+    if len(value) == 4:
+        return f"{value}-01-01"
+
+    if len(value) == 7:
+        return f"{value}-01"
+
+    return value

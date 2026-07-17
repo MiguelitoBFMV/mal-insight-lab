@@ -132,6 +132,8 @@ class MyAnimeListClient:
                 "related_anime",
                 "related_manga",
                 "alternative_titles",
+                "related_anime{node{id,title,main_picture,alternative_titles,media_type,status,num_episodes,start_date,end_date},relation_type,relation_type_formatted}",
+                "related_manga{node{id,title,main_picture,media_type,status,num_chapters,num_volumes,start_date,end_date},relation_type,relation_type_formatted}",
             ]),
         }
 
