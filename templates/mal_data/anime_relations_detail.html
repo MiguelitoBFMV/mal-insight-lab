@@ -72,6 +72,113 @@
 
 <section class="panel">
     <header class="panel-header">
+        <h2 class="panel-title">Franchise Audit</h2>
+        <span class="panel-title">Relation Intelligence</span>
+    </header>
+
+    <div class="panel-body audit-grid">
+        <article class="audit-card">
+            <h3>Local Priority</h3>
+            <p class="audit-count">{{ franchise_audit.local_priority_count }}</p>
+
+            {% if franchise_audit.local_priority_nodes %}
+                <ul class="audit-list">
+                    {% for relation in franchise_audit.local_priority_nodes|slice:":6" %}
+                        <li>
+                            <a href="{% url 'anime_relations_detail' relation.target_mal_id %}">
+                                {{ relation.target_display_title }}
+                            </a>
+                            <span>{{ relation.target_display_status }} · {{ relation.target_display_media_type|upper }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="empty-state">No active local franchise nodes detected.</p>
+            {% endif %}
+        </article>
+
+        <article class="audit-card">
+            <h3>Local Completed</h3>
+            <p class="audit-count">{{ franchise_audit.local_completed_count }}</p>
+
+            {% if franchise_audit.local_completed_nodes %}
+                <ul class="audit-list">
+                    {% for relation in franchise_audit.local_completed_nodes|slice:":6" %}
+                        <li>
+                            <a href="{% url 'anime_relations_detail' relation.target_mal_id %}">
+                                {{ relation.target_display_title }}
+                            </a>
+                            <span>Score {{ relation.target_display_score }} · {{ relation.target_display_media_type|upper }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="empty-state">No completed local nodes detected.</p>
+            {% endif %}
+        </article>
+
+        <article class="audit-card">
+            <h3>External Priority</h3>
+            <p class="audit-count">{{ franchise_audit.external_priority_count }}</p>
+
+            {% if franchise_audit.external_priority_nodes %}
+                <ul class="audit-list">
+                    {% for relation in franchise_audit.external_priority_nodes|slice:":6" %}
+                        <li>
+                            <a href="{% url 'anime_relations_detail' relation.target_mal_id %}">
+                                {{ relation.target_display_title }}
+                            </a>
+                            <span>{{ relation.relation_type_formatted|default:relation.relation_type }} · {{ relation.target_display_media_type|upper }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="empty-state">No high-priority external nodes detected.</p>
+            {% endif %}
+        </article>
+
+        <article class="audit-card">
+            <h3>Low Priority / Extras</h3>
+            <p class="audit-count">{{ franchise_audit.external_low_priority_count }}</p>
+
+            {% if franchise_audit.external_low_priority_nodes %}
+                <ul class="audit-list">
+                    {% for relation in franchise_audit.external_low_priority_nodes|slice:":6" %}
+                        <li>
+                            <a href="{% url 'anime_relations_detail' relation.target_mal_id %}">
+                                {{ relation.target_display_title }}
+                            </a>
+                            <span>{{ relation.relation_type_formatted|default:relation.relation_type }} · {{ relation.target_display_media_type|upper }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="empty-state">No low-priority extras detected.</p>
+            {% endif %}
+        </article>
+
+        {% if franchise_audit.unknown_count > 0 %}
+            <article class="audit-card">
+                <h3>Unknown Nodes</h3>
+                <p class="audit-count">{{ franchise_audit.unknown_count }}</p>
+
+                <ul class="audit-list">
+                    {% for relation in franchise_audit.unknown_nodes|slice:":6" %}
+                        <li>
+                            <a href="{% url 'anime_relations_detail' relation.target_mal_id %}">
+                                {{ relation.target_display_title }}
+                            </a>
+                            <span>Metadata pending</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </article>
+        {% endif %}
+    </div>
+</section>
+
+<section class="panel">
+    <header class="panel-header">
         <h2 class="panel-title">Related Anime</h2>
         <span class="panel-title">{{ anime_relations|length }} Nodes</span>
     </header>
