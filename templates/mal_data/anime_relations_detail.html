@@ -81,10 +81,10 @@
             <div class="relation-grid">
                 {% for relation in anime_relations %}
                     <article class="relation-card">
-                        {% if relation.target_picture_url %}
+                        {% if relation.target_display_picture_url %}
                             <img
                                 class="relation-cover"
-                                src="{{ relation.target_picture_url }}"
+                                src="{{ relation.target_display_picture_url }}"
                                 alt="{{ relation.target_display_title }}"
                             >
                         {% else %}
@@ -117,9 +117,19 @@
                                     {{ relation.relation_type_formatted|default:relation.relation_type }}
                                 </span>
 
-                                {% if relation.target_local_list_status %}
+                                {% if relation.has_local_target %}
+                                    <span class="status-pill status-live">
+                                        LOCAL NODE
+                                    </span>
                                     <span class="status-pill status-live">
                                         {{ relation.target_display_status|upper }}
+                                    </span>
+                                {% elif relation.is_external_metadata_node %}
+                                    <span class="status-pill">
+                                        EXTERNAL NODE
+                                    </span>
+                                    <span class="status-pill status-paused">
+                                        METADATA CACHED
                                     </span>
                                 {% else %}
                                     <span class="status-pill">
