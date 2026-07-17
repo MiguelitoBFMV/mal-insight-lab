@@ -1041,48 +1041,63 @@ button.danger-button:hover {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 16px;
+    align-items: stretch;
 }
 
 .audit-card {
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-soft);
     background: rgba(255, 255, 255, 0.015);
     padding: 16px;
-    min-height: 220px;
+    min-height: 260px;
+    display: flex;
+    flex-direction: column;
+}
+
+.audit-card:hover {
+    border-color: var(--border);
+    background: rgba(169, 193, 255, 0.04);
 }
 
 .audit-card h3 {
-    margin: 0 0 12px;
+    margin: 0;
     color: var(--blue);
     font-family: var(--font-mono);
+    font-size: 0.8rem;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-size: 0.85rem;
+    letter-spacing: 0.1em;
 }
 
 .audit-count {
-    margin: 0 0 14px;
-    font-size: 2rem;
-    font-weight: 800;
+    margin: 12px 0 16px;
     color: var(--text);
+    font-size: 2.4rem;
+    font-weight: 800;
+    line-height: 1;
 }
 
 .audit-list {
     list-style: none;
     padding: 0;
     margin: 0;
+    display: grid;
+    gap: 10px;
 }
 
 .audit-list li {
     border-top: 1px solid rgba(169, 193, 255, 0.14);
-    padding: 10px 0;
+    padding-top: 10px;
 }
 
 .audit-list a {
     display: block;
-    color: var(--blue);
+    color: var(--blue-strong);
     text-decoration: none;
     font-weight: 700;
     line-height: 1.25;
+}
+
+.audit-list a:hover {
+    color: var(--red);
 }
 
 .audit-list span {
@@ -1090,19 +1105,26 @@ button.danger-button:hover {
     margin-top: 4px;
     color: var(--muted);
     font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     text-transform: uppercase;
+    letter-spacing: 0.03em;
 }
 
-@media (max-width: 1200px) {
+.audit-card .empty-state {
+    margin-top: 8px;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+}
+
+@media (max-width: 1400px) {
     .audit-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
-@media (max-width: 700px) {
+@media (max-width: 720px) {
     .audit-grid {
         grid-template-columns: 1fr;
     }
 }
-
