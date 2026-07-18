@@ -23,6 +23,7 @@ from mal_data.services.anilist_client import AniListClient
 from mal_data.services.manual_tracked_sync import sync_manual_tracked_anime_entries, sync_manual_tracked_anime_entry
 from mal_data.services.anime_metadata_sync import sync_anime_metadata
 from mal_data.services.mal_client import MyAnimeListClient
+from mal_data.services.seasonal_sync import sync_seasonal_anime
 
 def dashboard(request):
     now = timezone.now()
@@ -770,18 +771,29 @@ def rescue_anime_from_search_view(request):
     return redirect("anime_search")
 
 def seasonal_board(request):
+    valid_seasons = ["ALL", "WINTER", "SPRING", "SUMMER", "FALL"]
+
     season = request.GET.get("season", "SUMMER").upper()
+    if season not in valid_seasons:
+        season = "SUMMER"
+
     year = int(request.GET.get("year", 2026))
     format_filter = request.GET.get("format", "all")
     local_filter = request.GET.get("local", "all")
+    sort = request.GET.get("sort", "countdown")
 
-    seasonal_anime = SeasonalAnime.objects.filter(
-        season=season,
-        season_year=year,
-    )
+    if season == "ALL":
+        seasonal_anime = SeasonalAnime.objects.filter(season_year=year)
+    else:
+        seasonal_anime = SeasonalAnime.objects.filter(
+            season=season,
+            season_year=year,
+        )
 
     if format_filter != "all":
         seasonal_anime = seasonal_anime.filter(format=format_filter.upper())
+
+    seasonal_anime = list(seasonal_anime)
 
     anime_entries_by_mal_id = {
         anime.mal_id: anime
@@ -825,12 +837,63 @@ def seasonal_board(request):
             }
         )
 
+    def countdown_sort_key(item):
+        seasonal = item["seasonal"]
+        local_entry = item["local_entry"]
+
+        has_next_airing = 0 if seasonal.next_airing_at else 1
+
+        if seasonal.next_airing_at:
+            next_airing_sort = seasonal.next_airing_at
+        else:
+            next_airing_sort = timezone.datetime.max.replace(
+                tzinfo=timezone.get_current_timezone()
+            )
+
+        status_priority = {
+            "RELEASING": 0,
+            "NOT_YET_RELEASED": 1,
+            "FINISHED": 2,
+            "CANCELLED": 3,
+            "HIATUS": 4,
+        }.get(seasonal.status, 99)
+
+        local_priority = 1
+        if local_entry and local_entry.list_status == "watching":
+            local_priority = 0
+        elif local_entry and local_entry.list_status == "plan_to_watch":
+            local_priority = 1
+        elif not local_entry:
+            local_priority = 2
+        elif local_entry and local_entry.list_status == "completed":
+            local_priority = 3
+        else:
+            local_priority = 4
+
+        return (
+            has_next_airing,
+            next_airing_sort,
+            status_priority,
+            local_priority,
+            seasonal.display_title.lower(),
+        )
+
+    if sort == "title":
+        enriched_items = sorted(
+            enriched_items,
+            key=lambda item: item["seasonal"].display_title.lower(),
+        )
+    else:
+        sort = "countdown"
+        enriched_items = sorted(enriched_items, key=countdown_sort_key)
+
     context = {
         "season": season,
         "year": year,
         "format_filter": format_filter,
         "local_filter": local_filter,
-        "season_options": ["WINTER", "SPRING", "SUMMER", "FALL"],
+        "sort": sort,
+        "season_options": valid_seasons,
         "year_options": range(year - 2, year + 3),
         "format_options": [
             "all",
@@ -850,11 +913,64 @@ def seasonal_board(request):
             ("plan_to_watch", "Plan to Watch"),
             ("completed", "Completed"),
         ],
+        "sort_options": [
+            ("countdown", "Countdown"),
+            ("title", "Title A-Z"),
+        ],
         "items": enriched_items,
         "total_items": len(enriched_items),
     }
 
     return render(request, "mal_data/seasonal_board.html", context)
+
+def sync_seasonal_board_view(request):
+    if request.method != "POST":
+        return redirect("seasonal_board")
+
+    valid_seasons = ["WINTER", "SPRING", "SUMMER", "FALL"]
+
+    season = request.POST.get("season", "SUMMER").upper()
+    year = int(request.POST.get("year", 2026))
+    next_url = request.POST.get("next") or "seasonal_board"
+
+    if season == "ALL":
+        seasons_to_sync = valid_seasons
+    elif season in valid_seasons:
+        seasons_to_sync = [season]
+    else:
+        messages.error(request, "Invalid seasonal board filter.")
+        return redirect(next_url)
+
+    try:
+        results = [
+            sync_seasonal_anime(season_to_sync, year)
+            for season_to_sync in seasons_to_sync
+        ]
+
+        created_count = sum(result["created_count"] for result in results)
+        updated_count = sum(result["updated_count"] for result in results)
+        total_count = sum(result["total_count"] for result in results)
+
+        synced_label = (
+            f"ALL {year}"
+            if season == "ALL"
+            else f"{season} {year}"
+        )
+
+        messages.success(
+            request,
+            (
+                f"Seasonal Board synced: {synced_label} · "
+                f"Created: {created_count} · "
+                f"Updated: {updated_count} · "
+                f"Total: {total_count}"
+            ),
+        )
+
+    except Exception as error:
+        messages.error(request, f"Seasonal Board sync failed: {error}")
+
+    return redirect(next_url)
 
 def add_seasonal_to_plan_view(request):
     if request.method != "POST":

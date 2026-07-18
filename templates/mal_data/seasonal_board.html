@@ -73,8 +73,29 @@
                 </select>
             </label>
 
+            <label for="sort">
+                Sort
+                <select id="sort" name="sort">
+                    {% for value, label in sort_options %}
+                        <option value="{{ value }}" {% if sort == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </label>
+
             <button class="secondary-button" type="submit">
                 Apply Filters
+            </button>
+        </form>
+
+        <form method="post" action="{% url 'sync_seasonal_board' %}">
+            {% csrf_token %}
+            <input type="hidden" name="season" value="{{ season }}">
+            <input type="hidden" name="year" value="{{ year }}">
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button type="submit" class="command-button command-button-primary">
+                Sync Board
             </button>
         </form>
     </div>
@@ -104,7 +125,7 @@
 
                             <div class="seasonal-card-body">
                                 <div class="relation-card-kicker">
-                                    {{ seasonal.format|default:"UNKNOWN" }}
+                                    {{ seasonal.format|default:"UNKNOWN" }} · {{ seasonal.season }} {{ seasonal.season_year }}
                                 </div>
 
                                 <h3 class="relation-card-title">

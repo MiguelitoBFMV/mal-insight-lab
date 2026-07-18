@@ -12,5 +12,6 @@ urlpatterns = [
     path("anime/search/", views.anime_search_view, name="anime_search"),
     path("anime/search/rescue/", views.rescue_anime_from_search_view, name="rescue_anime_from_search"),
     path("anime/seasonal/", views.seasonal_board, name="seasonal_board"),
+    path("anime/seasonal/sync/", views.sync_seasonal_board_view, name="sync_seasonal_board"),
     path("anime/seasonal/add-to-plan/", views.add_seasonal_to_plan_view, name="add_seasonal_to_plan"),
 ]
