@@ -19,14 +19,6 @@
     </div>
 </header>
 
-{% if messages %}
-    {% for message in messages %}
-        <section class="message-panel" aria-label="Mensaje del sistema">
-            <strong>{{ message }}</strong>
-        </section>
-    {% endfor %}
-{% endif %}
-
 <div class="dashboard-grid">
     <aside class="left-column" aria-label="Resumen del usuario y consumo">
         <section class="panel">
