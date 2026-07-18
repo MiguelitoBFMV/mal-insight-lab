@@ -225,21 +225,47 @@
                                 </span>
 
                                 {% if relation.has_local_target %}
-                                    <span class="status-pill status-live">
+                                    <span class="status-pill status-node-local">
                                         LOCAL NODE
                                     </span>
-                                    <span class="status-pill status-live">
-                                        {{ relation.target_display_status|upper }}
-                                    </span>
+
+                                    {% if relation.target_anime_entry.list_status == "watching" %}
+                                        <span class="status-pill status-watching">
+                                            {{ relation.target_display_status|upper }}
+                                        </span>
+                                    {% elif relation.target_anime_entry.list_status == "plan_to_watch" %}
+                                        <span class="status-pill status-plan">
+                                            {{ relation.target_display_status|upper }}
+                                        </span>
+                                    {% elif relation.target_anime_entry.list_status == "completed" %}
+                                        <span class="status-pill status-completed">
+                                            {{ relation.target_display_status|upper }}
+                                        </span>
+                                    {% elif relation.target_anime_entry.list_status == "on_hold" %}
+                                        <span class="status-pill status-on-hold">
+                                            {{ relation.target_display_status|upper }}
+                                        </span>
+                                    {% elif relation.target_anime_entry.list_status == "dropped" %}
+                                        <span class="status-pill status-dropped">
+                                            {{ relation.target_display_status|upper }}
+                                        </span>
+                                    {% else %}
+                                        <span class="status-pill">
+                                            {{ relation.target_display_status|upper }}
+                                        </span>
+                                    {% endif %}
                                 {% elif relation.is_external_metadata_node %}
-                                    <span class="status-pill">
+                                    <span class="status-pill status-node-external">
                                         EXTERNAL NODE
                                     </span>
-                                    <span class="status-pill status-paused">
+                                    <span class="status-pill status-not-local">
+                                        NOT LOCAL
+                                    </span>
+                                    <span class="status-pill status-metadata">
                                         METADATA CACHED
                                     </span>
                                 {% else %}
-                                    <span class="status-pill">
+                                    <span class="status-pill status-not-local">
                                         NOT LOCAL
                                     </span>
                                 {% endif %}
@@ -322,7 +348,7 @@
                                         {{ relation.target_local_list_status|upper }}
                                     </span>
                                 {% else %}
-                                    <span class="status-pill">
+                                    <span class="status-pill status-not-local">
                                         NOT LOCAL
                                     </span>
                                 {% endif %}
