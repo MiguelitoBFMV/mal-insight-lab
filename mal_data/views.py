@@ -154,6 +154,15 @@ def dashboard(request):
         broadcast_watchlist_entries.values_list("mal_id", flat=True)
     )
 
+    def compact_relation_title(title):
+        if not title:
+            return "Unknown title"
+
+        compact_title = title.split(" (")[0]
+        compact_title = compact_title.split("（")[0]
+
+        return compact_title.strip()
+
     for relation in sequel_relations:
         if relation.target_mal_id in seen_target_ids:
             continue
@@ -234,6 +243,16 @@ def dashboard(request):
             "source_priority": source_priority_by_mal_id.get(
                 relation.source_mal_id,
                 999,
+            ),
+            "target_compact_title": compact_relation_title(
+                target_anime.display_title
+                if target_anime
+                else relation.target_title
+            ),
+            "source_compact_title": compact_relation_title(
+                source_anime.display_title
+                if source_anime
+                else relation.source_title
             ),
         }
 

@@ -1584,3 +1584,32 @@ button.danger-button:hover {
  overflow: hidden;
  text-overflow: ellipsis;
 }
+
+.sequel-radar-list {
+ overflow-x: hidden;
+}
+
+.sequel-radar-item {
+ min-width: 0;
+ gap: 4px;
+}
+
+.sequel-radar-title {
+ display: block;
+ max-width: 100%;
+ line-height: 1.35;
+ white-space: normal;
+ overflow-wrap: anywhere;
+ word-break: normal;
+}
+
+.signal-source-title {
+ margin: 0;
+ max-width: 100%;
+ color: var(--muted);
+ font-size: 0.72rem;
+ line-height: 1.35;
+ white-space: normal;
+ overflow-wrap: anywhere;
+ word-break: normal;
+}

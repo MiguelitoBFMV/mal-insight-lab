@@ -381,7 +381,7 @@
             <div class="panel-body">
                 <div class="command-log-scroll">
                     {% if sequel_recommendations %}
-                        <ul class="command-log">
+                        <ul class="command-log sequel-radar-list">
                             {% for recommendation in sequel_recommendations %}
                                 <article class="signal-item sequel-radar-item">
                                     <a
@@ -389,11 +389,11 @@
                                         href="{% url 'anime_relations_detail' recommendation.target_mal_id %}"
                                         title="{{ recommendation.target_title }}"
                                     >
-                                        >>> NEXT_SIGNAL: {{ recommendation.target_title }}
+                                        >>> NEXT_SIGNAL: {{ recommendation.target_compact_title }}
                                     </a>
 
                                     <p class="signal-source-title" title="{{ recommendation.source_title }}">
-                                        FROM: {{ recommendation.source_title }}
+                                        FROM: {{ recommendation.source_compact_title }}
                                     </p>
                                 </article>
                             {% endfor %}
