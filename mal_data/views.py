@@ -17,7 +17,7 @@ from mal_data.models import (
     SeasonalAnime
 )
 from mal_data.services.anime_relations_sync import sync_anime_relations
-from mal_data.services.anime_list_sync import sync_all_anime_statuses
+from mal_data.services.anime_list_sync import sync_all_anime_statuses, upsert_anime_entry
 from mal_data.services.anilist_airing_sync import sync_airing_data_for_dashboard
 from mal_data.services.anilist_client import AniListClient
 from mal_data.services.manual_tracked_sync import sync_manual_tracked_anime_entries, sync_manual_tracked_anime_entry
@@ -1000,22 +1000,48 @@ def add_seasonal_to_plan_view(request):
         return redirect(next_url)
 
     try:
+        mal_id = int(mal_id)
+
         client = MyAnimeListClient()
 
-        client.update_anime_my_list_status(
-            anime_id=int(mal_id),
+        updated_list_status = client.update_anime_my_list_status(
+            anime_id=mal_id,
             status="plan_to_watch",
             num_watched_episodes=0,
             score=0,
             is_rewatching=False,
         )
 
-        sync_all_anime_statuses()
+        anime_details = client.fetch_anime_details(mal_id)
+
+        anime_payload = {
+            "node": anime_details,
+            "list_status": {
+                "status": updated_list_status.get("status", "plan_to_watch"),
+                "score": updated_list_status.get("score", 0),
+                "num_episodes_watched": updated_list_status.get(
+                    "num_episodes_watched",
+                    0,
+                ),
+                "is_rewatching": updated_list_status.get(
+                    "is_rewatching",
+                    False,
+                ),
+                "updated_at": updated_list_status.get("updated_at"),
+            },
+        }
+
+        anime, created = upsert_anime_entry(anime_payload)
+
         sync_airing_data_for_dashboard()
 
         messages.success(
             request,
-            "Anime added to MyAnimeList Plan to Watch and synchronized locally.",
+            (
+                "Anime added to MyAnimeList Plan to Watch and synchronized locally. "
+                f"Node: {anime.display_title} · "
+                f"Created: {created}"
+            ),
         )
 
         return redirect(next_url)
