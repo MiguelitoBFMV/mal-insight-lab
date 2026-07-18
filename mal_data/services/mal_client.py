@@ -175,7 +175,7 @@ class MyAnimeListClient:
 
         return response.json()
     
-    def update_anime_list_status(
+    def update_anime_my_list_status(
         self,
         anime_id,
         status,
@@ -183,14 +183,14 @@ class MyAnimeListClient:
         score=0,
         is_rewatching=False,
     ):
-        url = f"{self.BASE_URL}/anime/{anime_id}/my_list_status"
+        url = self.ANIME_MY_LIST_STATUS_URL.format(anime_id=anime_id)
 
         data = {
             "status": status,
             "num_watched_episodes": num_watched_episodes,
             "score": score,
-            "is_rewatching": int(is_rewatching),
+            "is_rewatching": "true" if is_rewatching else "false",
         }
 
-        return self.put(url, data=data)
+        return self.put_page(url, data=data)
 

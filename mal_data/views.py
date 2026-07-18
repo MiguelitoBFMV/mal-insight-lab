@@ -251,16 +251,10 @@ def anime_status_list(request, status):
         for status_key in status_order
     ]
 
+    selected_statuses_query = ""
+
     if status == "all":
         selected_statuses = request.GET.getlist("statuses")
-
-        selected_statuses_query = ""
-
-        if status == "all":
-            selected_statuses_query = "".join(
-                f"&statuses={selected_status}"
-                for selected_status in selected_statuses
-            )
 
         if not selected_statuses:
             selected_statuses = status_order.copy()
@@ -276,6 +270,11 @@ def anime_status_list(request, status):
 
         if not selected_statuses:
             selected_statuses = status_order.copy()
+
+        selected_statuses_query = "".join(
+            f"&statuses={selected_status}"
+            for selected_status in selected_statuses
+        )
 
         anime_entries = AnimeEntry.objects.filter(
             list_status__in=selected_statuses
