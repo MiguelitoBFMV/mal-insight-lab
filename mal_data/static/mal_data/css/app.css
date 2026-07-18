@@ -934,6 +934,10 @@ a:hover {
     margin-top: 14px;
 }
 
+.relation-card-actions form {
+    margin: 0;
+}
+
 @media (max-width: 720px) {
     .relation-source {
         grid-template-columns: 1fr;

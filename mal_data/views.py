@@ -856,3 +856,45 @@ def seasonal_board(request):
 
     return render(request, "mal_data/seasonal_board.html", context)
 
+def add_seasonal_to_plan_view(request):
+    if request.method != "POST":
+        return redirect("seasonal_board")
+
+    mal_id = request.POST.get("mal_id")
+    title_snapshot = request.POST.get("title_snapshot", "").strip()
+    next_url = request.POST.get("next") or "seasonal_board"
+
+    if not mal_id:
+        messages.error(request, "Cannot add seasonal anime without MAL ID.")
+        return redirect(next_url)
+
+    try:
+        tracked_entry, _ = ManualTrackedAnime.objects.update_or_create(
+            mal_id=int(mal_id),
+            defaults={
+                "title_snapshot": title_snapshot,
+                "status": "plan_to_watch",
+                "episodes_watched": 0,
+                "score": 0,
+                "is_rewatching": False,
+                "active": True,
+            },
+        )
+
+        anime, created = sync_manual_tracked_anime_entry(tracked_entry)
+
+        messages.success(
+            request,
+            (
+                "Seasonal anime added to Plan to Watch. "
+                f"Node: {anime.display_title} · "
+                f"Created: {created}"
+            ),
+        )
+
+        return redirect(next_url)
+
+    except Exception as error:
+        messages.error(request, f"Seasonal add failed: {error}")
+        return redirect(next_url)
+    

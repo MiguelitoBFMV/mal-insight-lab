@@ -184,6 +184,32 @@
                                     {% endif %}
                                 </div>
 
+                                <div class="relation-card-actions">
+                                    {% if local_entry %}
+                                        <a
+                                            class="secondary-button compact-button"
+                                            href="{% url 'anime_relations_detail' local_entry.mal_id %}"
+                                        >
+                                            Open Node
+                                        </a>
+                                    {% elif seasonal.mal_id %}
+                                        <form method="post" action="{% url 'add_seasonal_to_plan' %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="mal_id" value="{{ seasonal.mal_id }}">
+                                            <input type="hidden" name="title_snapshot" value="{{ seasonal.display_title }}">
+                                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+
+                                            <button class="secondary-button compact-button" type="submit">
+                                                Add to Plan
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <span class="status-pill status-not-local">
+                                            NO MAL ID
+                                        </span>
+                                    {% endif %}
+                                </div>
+
                                 {% if seasonal.genres %}
                                     <div class="seasonal-genres">
                                         {% for genre in seasonal.genres|slice:":4" %}
