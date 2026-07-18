@@ -25,21 +25,20 @@
         <nav class="filter-nav" aria-label="Filtros de estado de emisión">
             <span class="filter-label">Airing Status</span>
 
-            <a  href="{% url 'anime_status_list' status %}{% if sort %}?sort={{ sort }}{% endif %}"
+            <a href="{% url 'anime_status_list' status %}?{% if sort %}sort={{ sort }}{% endif %}{{ selected_statuses_query }}"
                 class="filter-chip {% if not airing_filter %}active{% endif %}">All</a>
 
             <a
-                href="{% url 'anime_status_list' status %}?airing=finished_airing{% if sort %}&sort={{ sort }}{% endif %}"
+                href="{% url 'anime_status_list' status %}?airing=finished_airing{% if sort %}&sort={{ sort }}{% endif %}{{ selected_statuses_query }}"
                 class="filter-chip {% if airing_filter == 'finished_airing' %}active{% endif %}">Finished
             </a>
 
-            <a
-                href="{% url 'anime_status_list' status %}?airing=currently_airing{% if sort %}&sort={{ sort }}{% endif %}"
+            <a href="{% url 'anime_status_list' status %}?airing=currently_airing{% if sort %}&sort={{ sort }}{% endif %}{{ selected_statuses_query }}"
                 class="filter-chip {% if airing_filter == 'currently_airing' %}active{% endif %}">Airing
             </a>
 
             <a
-                href="{% url 'anime_status_list' status %}?airing=not_yet_aired{% if sort %}&sort={{ sort }}{% endif %}"
+                href="{% url 'anime_status_list' status %}?airing=not_yet_aired{% if sort %}&sort={{ sort }}{% endif %}{{ selected_statuses_query }}"
                 class="filter-chip {% if airing_filter == 'not_yet_aired' %}active{% endif %}">Queued
             </a>
         </nav>
@@ -77,11 +76,11 @@
 {% if page_obj.paginator.num_pages > 1 %}
     <nav class="pagination-panel" aria-label="Paginación superior">
         {% if page_obj.has_previous %}
-            <a href="?page=1{% if airing_filter %}&airing={{ airing_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+            <a href="?page=1{% if airing_filter %}&airing={{ airing_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}{{ selected_statuses_query }}">
                 « First
             </a>
 
-            <a href="?page={{ page_obj.previous_page_number }}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+            <a href="?page={{ page_obj.previous_page_number }}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}{{ selected_statuses_query }}">
                 ‹ Previous
             </a>
         {% endif %}
@@ -89,11 +88,11 @@
         <span>Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
 
         {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+            <a href="?page={{ page_obj.next_page_number }}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}{{ selected_statuses_query }}">
                 Next ›
             </a>
 
-            <a href="?page={{ page_obj.paginator.num_pages }}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}{{ selected_statuses_query }}">
                 Last »
             </a>
         {% endif %}
@@ -113,33 +112,33 @@
                     <thead>
                         <tr>
                             <th>
-                                <a href="?{% if airing_filter %}airing={{ airing_filter }}&{% endif %}sort={% if sort == 'title' %}-title{% else %}title{% endif %}">
+                                <a href="?{% if airing_filter %}airing={{ airing_filter }}&{% endif %}sort={% if sort == 'title' %}-title{% else %}title{% endif %}{{ selected_statuses_query }}">
                                     Title
                                 </a>
                             </th>
                             <th>My Status</th>
                             <th>
-                                <a href="?{% if airing_filter %}airing={{ airing_filter }}&{% endif %}sort={% if sort == 'num_episodes_watched' %}-num_episodes_watched{% else %}num_episodes_watched{% endif %}">
+                                <a href="?{% if airing_filter %}airing={{ airing_filter }}&{% endif %}sort={% if sort == 'num_episodes_watched' %}-num_episodes_watched{% else %}num_episodes_watched{% endif %}{{ selected_statuses_query }}">
                                     Progress
                                 </a>
                             </th>
                             <th>
-                                <a href="?{% if airing_filter %}airing={{ airing_filter }}&{% endif %}sort={% if sort == 'score' %}-score{% else %}score{% endif %}">
+                                <a href="?{% if airing_filter %}airing={{ airing_filter }}&{% endif %}sort={% if sort == 'score' %}-score{% else %}score{% endif %}{{ selected_statuses_query }}">
                                     Score
                                 </a>
                             </th>
                             <th>
-                                <a href="?{% if airing_filter %}airing={{ airing_filter }}&{% endif %}sort={% if sort == 'media_type' %}-media_type{% else %}media_type{% endif %}">
+                                <a href="?{% if airing_filter %}airing={{ airing_filter }}&{% endif %}sort={% if sort == 'media_type' %}-media_type{% else %}media_type{% endif %}{{ selected_statuses_query }}">
                                     Type
                                 </a>
                             </th>
                             <th>
-                                <a href="?{% if airing_filter %}airing={{ airing_filter }}&{% endif %}sort={% if sort == 'airing_status' %}-airing_status{% else %}airing_status{% endif %}">
+                                <a href="?{% if airing_filter %}airing={{ airing_filter }}&{% endif %}sort={% if sort == 'airing_status' %}-airing_status{% else %}airing_status{% endif %}{{ selected_statuses_query }}">
                                     Airing
                                 </a>
                             </th>
                             <th>
-                                <a href="?{% if airing_filter %}airing={{ airing_filter }}&{% endif %}sort={% if sort == 'updated_at_mal' %}-updated_at_mal{% else %}updated_at_mal{% endif %}">
+                                <a href="?{% if airing_filter %}airing={{ airing_filter }}&{% endif %}sort={% if sort == 'updated_at_mal' %}-updated_at_mal{% else %}updated_at_mal{% endif %}{{ selected_statuses_query }}">
                                     Updated
                                 </a>
                             </th>
@@ -269,13 +268,13 @@
 </section>
 
 {% if page_obj.paginator.num_pages > 1 %}
-    <nav class="pagination-panel" aria-label="Paginación inferior">
+    <nav class="pagination-panel" aria-label="Paginación superior">
         {% if page_obj.has_previous %}
-            <a href="?page=1{% if airing_filter %}&airing={{ airing_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+            <a href="?page=1{% if airing_filter %}&airing={{ airing_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}{{ selected_statuses_query }}">
                 « First
             </a>
 
-            <a href="?page={{ page_obj.previous_page_number }}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+            <a href="?page={{ page_obj.previous_page_number }}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}{{ selected_statuses_query }}">
                 ‹ Previous
             </a>
         {% endif %}
@@ -283,14 +282,15 @@
         <span>Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
 
         {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+            <a href="?page={{ page_obj.next_page_number }}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}{{ selected_statuses_query }}">
                 Next ›
             </a>
 
-            <a href="?page={{ page_obj.paginator.num_pages }}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if airing_filter %}&airing={{ airing_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}{{ selected_statuses_query }}">
                 Last »
             </a>
         {% endif %}
     </nav>
 {% endif %}
+
 {% endblock %}

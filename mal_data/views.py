@@ -254,6 +254,14 @@ def anime_status_list(request, status):
     if status == "all":
         selected_statuses = request.GET.getlist("statuses")
 
+        selected_statuses_query = ""
+
+        if status == "all":
+            selected_statuses_query = "".join(
+                f"&statuses={selected_status}"
+                for selected_status in selected_statuses
+            )
+
         if not selected_statuses:
             selected_statuses = status_order.copy()
 
@@ -363,6 +371,7 @@ def anime_status_list(request, status):
         "status_order": status_order,
         "selected_statuses": selected_statuses,
         "status_filter_options": status_filter_options,
+        "selected_statuses_query": selected_statuses_query,
     }
 
     return render(request, "mal_data/anime_status_list.html", context)
