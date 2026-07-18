@@ -384,23 +384,13 @@
                         <ul class="command-log">
                             {% for recommendation in sequel_recommendations %}
                                 <article class="signal-item sequel-radar-item">
-                                    <a href="{% url 'anime_relations_detail' recommendation.target_mal_id %}">
+                                    <a
+                                        class="sequel-radar-title"
+                                        href="{% url 'anime_relations_detail' recommendation.target_mal_id %}"
+                                        title="{{ recommendation.target_title }}"
+                                    >
                                         >>> NEXT_SIGNAL: {{ recommendation.target_title }}
                                     </a>
-
-                                    <div class="signal-chip-row">
-                                        <span class="status-pill">
-                                            {{ recommendation.target_action_label|upper }}
-                                        </span>
-
-                                        <span class="status-pill">
-                                            {{ recommendation.target_airing_status|upper }}
-                                        </span>
-
-                                        <span class="status-pill status-source-{{ recommendation.source_kind }}">
-                                            {{ recommendation.source_kind|upper }}
-                                        </span>
-                                    </div>
 
                                     <p class="signal-source-title" title="{{ recommendation.source_title }}">
                                         FROM: {{ recommendation.source_title }}
