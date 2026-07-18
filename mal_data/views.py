@@ -99,7 +99,42 @@ def dashboard(request):
 
     fallback_active_entries = watching_entries.order_by("-updated_at_mal")[:4]
 
-    priority_source_entries = list(watching_entries) + list(completed_entries)
+    watching_source_entries = list(watching_entries)
+
+    rewatching_source_entries = list(
+        rewatching_entries.exclude(
+            mal_id__in=watching_entries.values_list("mal_id", flat=True)
+        )
+    )
+
+    completed_source_entries = list(
+        completed_entries.exclude(
+            Q(is_rewatching=True)
+            | Q(mal_id__in=watching_entries.values_list("mal_id", flat=True))
+        )
+    )
+
+    priority_source_entries = (
+        watching_source_entries
+        + rewatching_source_entries
+        + completed_source_entries
+    )
+
+    source_priority_by_mal_id = {
+        anime.mal_id: index
+        for index, anime in enumerate(priority_source_entries)
+    }
+
+    source_kind_by_mal_id = {}
+
+    for anime in watching_source_entries:
+        source_kind_by_mal_id[anime.mal_id] = "watching"
+
+    for anime in rewatching_source_entries:
+        source_kind_by_mal_id[anime.mal_id] = "rewatching"
+
+    for anime in completed_source_entries:
+        source_kind_by_mal_id[anime.mal_id] = "completed"
 
     source_mal_ids = [anime.mal_id for anime in priority_source_entries]
 
@@ -110,7 +145,6 @@ def dashboard(request):
             relation_source_type="anime",
             relation_type="sequel",
         )
-        .order_by("source_title", "target_title")
     )
 
     sequel_recommendations = []
@@ -124,32 +158,96 @@ def dashboard(request):
         if relation.target_mal_id in seen_target_ids:
             continue
 
-        target_anime = AnimeEntry.objects.filter(mal_id=relation.target_mal_id).first()
+        source_anime = AnimeEntry.objects.filter(
+            mal_id=relation.source_mal_id
+        ).first()
+
+        source_kind = source_kind_by_mal_id.get(
+            relation.source_mal_id,
+            "completed",
+        )
+
+        target_anime = AnimeEntry.objects.filter(
+            mal_id=relation.target_mal_id
+        ).first()
 
         if target_anime and target_anime.mal_id in broadcast_watchlist_ids:
             continue
 
-        if target_anime and target_anime.list_status in ["completed", "watching"]:
+        if target_anime and target_anime.list_status == "watching":
             continue
 
-        source_anime = AnimeEntry.objects.filter(mal_id=relation.source_mal_id).first()
+        target_is_completed = (
+            target_anime
+            and target_anime.list_status == "completed"
+        )
+
+        is_rewatch_next_candidate = (
+            source_kind == "rewatching"
+            and target_is_completed
+        )
+
+        if target_is_completed and not is_rewatch_next_candidate:
+            continue
+
+        if is_rewatch_next_candidate:
+            target_action_label = "Rewatch next"
+            target_action_priority = 2
+        elif target_anime and target_anime.list_status == "plan_to_watch":
+            target_action_label = "Plan to Watch"
+            target_action_priority = 0
+        elif target_anime and target_anime.list_status == "on_hold":
+            target_action_label = "On Hold"
+            target_action_priority = 1
+        elif target_anime and target_anime.list_status == "dropped":
+            target_action_label = "Dropped"
+            target_action_priority = 3
+        else:
+            target_action_label = "Not in local list"
+            target_action_priority = 0
 
         recommendation = {
-            "source_title": source_anime.display_title if source_anime else relation.source_title,
-            "target_title": target_anime.display_title if target_anime else relation.target_title,
+            "source_title": (
+                source_anime.display_title
+                if source_anime
+                else relation.source_title
+            ),
+            "source_kind": source_kind,
+            "target_title": (
+                target_anime.display_title
+                if target_anime
+                else relation.target_title
+            ),
             "target_mal_id": relation.target_mal_id,
-            "target_status": target_anime.personal_status_label if target_anime else "Not in local list",
+            "target_status": (
+                target_anime.personal_status_label
+                if target_anime
+                else "Not in local list"
+            ),
             "target_airing_status": (
                 target_anime.airing_status
                 if target_anime
                 else relation.target_status or "unknown"
+            ),
+            "target_action_label": target_action_label,
+            "target_action_priority": target_action_priority,
+            "source_priority": source_priority_by_mal_id.get(
+                relation.source_mal_id,
+                999,
             ),
         }
 
         sequel_recommendations.append(recommendation)
         seen_target_ids.add(relation.target_mal_id)
 
-    sequel_recommendations = sequel_recommendations[:10]
+    sequel_recommendations = sorted(
+        sequel_recommendations,
+        key=lambda recommendation: (
+            recommendation["source_priority"],
+            recommendation["target_action_priority"],
+            recommendation["target_title"].lower(),
+        ),
+    )[:10]
 
     currently_airing_count = anime_entries.filter(
         airing_status="currently_airing"

@@ -383,16 +383,22 @@
                     {% if sequel_recommendations %}
                         <ul class="command-log">
                             {% for recommendation in sequel_recommendations %}
-                                <li>
+                                <article class="signal-item">
                                     <a href="{% url 'anime_relations_detail' recommendation.target_mal_id %}">
-                                        &gt;&gt;&gt; NEXT_SIGNAL:
-                                        {{ recommendation.target_title }}
+                                        >>> NEXT_SIGNAL: {{ recommendation.target_title }}
                                     </a>
 
-                                    <div class="log-subtext">
-                                        {{ recommendation.target_status|upper }} · {{ recommendation.target_airing_status|upper }}
-                                    </div>
-                                </li>
+                                    <p>
+                                        {{ recommendation.target_action_label|upper }}
+                                        · {{ recommendation.target_airing_status|upper }}
+                                    </p>
+
+                                    <p class="signal-meta">
+                                        FROM:
+                                        {{ recommendation.source_title }}
+                                        · {{ recommendation.source_kind|upper }}
+                                    </p>
+                                </article>
                             {% endfor %}
                         </ul>
                     {% else %}
