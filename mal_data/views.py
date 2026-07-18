@@ -23,7 +23,7 @@ from mal_data.services.anilist_client import AniListClient
 from mal_data.services.manual_tracked_sync import sync_manual_tracked_anime_entries, sync_manual_tracked_anime_entry
 from mal_data.services.anime_metadata_sync import sync_anime_metadata
 from mal_data.services.mal_client import MyAnimeListClient
-from mal_data.services.seasonal_sync import sync_seasonal_anime
+from mal_data.services.seasonal_sync import sync_seasonal_anime, sync_tba_upcoming_anime
 
 def dashboard(request):
     now = timezone.now()
@@ -282,7 +282,13 @@ def anime_status_list(request, status):
         )
     else:
         selected_statuses = [status]
-        anime_entries = AnimeEntry.objects.filter(list_status=status)
+
+        if status == "watching":
+            anime_entries = AnimeEntry.objects.filter(
+                Q(list_status="watching") | Q(is_rewatching=True)
+            )
+        else:
+            anime_entries = AnimeEntry.objects.filter(list_status=status)
 
     airing_filter = request.GET.get("airing")
 
@@ -841,7 +847,9 @@ def seasonal_board(request):
         seasonal = item["seasonal"]
         local_entry = item["local_entry"]
 
-        has_next_airing = 0 if seasonal.next_airing_at else 1
+        is_tba_bucket = seasonal.season == "TBA"
+
+        has_next_airing = 0 if seasonal.next_airing_at and not is_tba_bucket else 1
 
         if seasonal.next_airing_at:
             next_airing_sort = seasonal.next_airing_at
@@ -859,6 +867,7 @@ def seasonal_board(request):
         }.get(seasonal.status, 99)
 
         local_priority = 1
+
         if local_entry and local_entry.list_status == "watching":
             local_priority = 0
         elif local_entry and local_entry.list_status == "plan_to_watch":
@@ -871,6 +880,7 @@ def seasonal_board(request):
             local_priority = 4
 
         return (
+            1 if is_tba_bucket else 0,
             has_next_airing,
             next_airing_sort,
             status_priority,
@@ -933,8 +943,11 @@ def sync_seasonal_board_view(request):
     year = int(request.POST.get("year", 2026))
     next_url = request.POST.get("next") or "seasonal_board"
 
+    include_tba_bucket = False
+
     if season == "ALL":
         seasons_to_sync = valid_seasons
+        include_tba_bucket = True
     elif season in valid_seasons:
         seasons_to_sync = [season]
     else:
@@ -946,6 +959,9 @@ def sync_seasonal_board_view(request):
             sync_seasonal_anime(season_to_sync, year)
             for season_to_sync in seasons_to_sync
         ]
+
+        if include_tba_bucket:
+            results.append(sync_tba_upcoming_anime(bucket_year=year))
 
         created_count = sum(result["created_count"] for result in results)
         updated_count = sum(result["updated_count"] for result in results)

@@ -128,7 +128,12 @@
 
                             <div class="seasonal-card-body">
                                 <div class="relation-card-kicker">
-                                    {{ seasonal.format|default:"UNKNOWN" }} · {{ seasonal.season }} {{ seasonal.season_year }}
+                                    {{ seasonal.format|default:"UNKNOWN" }} ·
+                                    {% if seasonal.season == "TBA" %}
+                                        TBA {{ seasonal.season_year }}
+                                    {% else %}
+                                        {{ seasonal.season }} {{ seasonal.season_year }}
+                                    {% endif %}
                                 </div>
 
                                 <h3 class="relation-card-title">
@@ -151,10 +156,12 @@
                                 <div class="relation-stats">
                                     <span>STATUS: {{ seasonal.status|default:"-" }}</span>
                                     <span>EPISODES: {{ seasonal.episodes|default:"TBD" }}</span>
-                                    {% if seasonal.next_airing_episode %}
-                                        <span>NEXT: EP {{ seasonal.next_airing_episode }}</span>
+                                    {% if seasonal.season == "TBA" %}
+                                        NEXT: DATE PENDING
+                                    {% elif seasonal.next_airing_episode %}
+                                        NEXT: EP {{ seasonal.next_airing_episode }}
                                     {% else %}
-                                        <span>NEXT: -</span>
+                                        NEXT: -
                                     {% endif %}
                                 </div>
 

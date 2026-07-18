@@ -254,3 +254,78 @@ class AniListClient:
 
         return payload.get("data", {}).get("Page")
     
+    def fetch_upcoming_tba_anime(self, page=1, per_page=50):
+        query = """
+        query ($page: Int!, $perPage: Int!) {
+        Page(page: $page, perPage: $perPage) {
+            pageInfo {
+            currentPage
+            hasNextPage
+            }
+            media(
+            type: ANIME
+            status: NOT_YET_RELEASED
+            sort: POPULARITY_DESC
+            ) {
+            id
+            idMal
+            title {
+                romaji
+                english
+                native
+            }
+            coverImage {
+                large
+                medium
+            }
+            season
+            seasonYear
+            format
+            status
+            episodes
+            nextAiringEpisode {
+                episode
+                airingAt
+                timeUntilAiring
+            }
+            genres
+            studios(isMain: true) {
+                nodes {
+                name
+                }
+            }
+            externalLinks {
+                site
+                url
+                type
+                language
+            }
+            }
+        }
+        }
+        """
+
+        response = requests.post(
+            self.API_URL,
+            json={
+                "query": query,
+                "variables": {
+                    "page": page,
+                    "perPage": per_page,
+                },
+            },
+            timeout=30,
+        )
+
+        if not response.ok:
+            raise Exception(
+                f"AniList API error {response.status_code}: {response.text}"
+            )
+
+        payload = response.json()
+
+        if "errors" in payload:
+            raise Exception(payload["errors"])
+
+        return payload.get("data", {}).get("Page", {})
+    
