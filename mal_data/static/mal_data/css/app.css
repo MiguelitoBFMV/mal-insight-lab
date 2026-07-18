@@ -1526,3 +1526,42 @@ button.danger-button:hover {
   width: 100%;
  }
 }
+
+.sequel-radar-item {
+ gap: 8px;
+}
+
+.signal-chip-row {
+ display: flex;
+ flex-wrap: wrap;
+ gap: 6px;
+ margin-top: 4px;
+}
+
+.signal-source-title {
+ margin: 0;
+ color: var(--muted);
+ font-size: 0.72rem;
+ line-height: 1.35;
+ white-space: nowrap;
+ overflow: hidden;
+ text-overflow: ellipsis;
+}
+
+.status-source-watching {
+ border-color: var(--blue);
+ color: var(--blue);
+ background: rgba(169, 193, 255, 0.08);
+}
+
+.status-source-rewatching {
+ border-color: #c084fc;
+ color: #d8b4fe;
+ background: rgba(192, 132, 252, 0.08);
+}
+
+.status-source-completed {
+ border-color: var(--muted);
+ color: var(--muted);
+ background: rgba(255, 255, 255, 0.03);
+}

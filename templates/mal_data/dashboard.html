@@ -383,20 +383,27 @@
                     {% if sequel_recommendations %}
                         <ul class="command-log">
                             {% for recommendation in sequel_recommendations %}
-                                <article class="signal-item">
+                                <article class="signal-item sequel-radar-item">
                                     <a href="{% url 'anime_relations_detail' recommendation.target_mal_id %}">
                                         >>> NEXT_SIGNAL: {{ recommendation.target_title }}
                                     </a>
 
-                                    <p>
-                                        {{ recommendation.target_action_label|upper }}
-                                        · {{ recommendation.target_airing_status|upper }}
-                                    </p>
+                                    <div class="signal-chip-row">
+                                        <span class="status-pill">
+                                            {{ recommendation.target_action_label|upper }}
+                                        </span>
 
-                                    <p class="signal-meta">
-                                        FROM:
-                                        {{ recommendation.source_title }}
-                                        · {{ recommendation.source_kind|upper }}
+                                        <span class="status-pill">
+                                            {{ recommendation.target_airing_status|upper }}
+                                        </span>
+
+                                        <span class="status-pill status-source-{{ recommendation.source_kind }}">
+                                            {{ recommendation.source_kind|upper }}
+                                        </span>
+                                    </div>
+
+                                    <p class="signal-source-title" title="{{ recommendation.source_title }}">
+                                        FROM: {{ recommendation.source_title }}
                                     </p>
                                 </article>
                             {% endfor %}
