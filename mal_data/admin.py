@@ -7,6 +7,7 @@ from .models import (
     AnimeSyncEvent,
     MangaEntry,
     ManualTrackedAnime,
+    SeasonalAnime,
 )
 
 
@@ -161,6 +162,39 @@ class AnimeMetadataAdmin(admin.ModelAdmin):
     list_filter = (
         "media_type",
         "airing_status",
+    )
+    readonly_fields = (
+        "raw_data",
+        "last_synced_at",
+    )
+
+@admin.register(SeasonalAnime)
+class SeasonalAnimeAdmin(admin.ModelAdmin):
+    list_display = (
+        "anilist_id",
+        "mal_id",
+        "display_title",
+        "season",
+        "season_year",
+        "format",
+        "status",
+        "episodes",
+        "next_airing_episode",
+        "next_airing_at",
+        "last_synced_at",
+    )
+    search_fields = (
+        "title_romaji",
+        "title_english",
+        "title_native",
+        "mal_id",
+        "anilist_id",
+    )
+    list_filter = (
+        "season",
+        "season_year",
+        "format",
+        "status",
     )
     readonly_fields = (
         "raw_data",

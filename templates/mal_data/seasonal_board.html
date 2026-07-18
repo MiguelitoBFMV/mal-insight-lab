@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Seasonal Board · MAL Insight Lab
+{% endblock %}
+
+{% block content %}
+<header class="hero">
+    <div class="hero-title">
+        <h1>Seasonal Broadcast Board</h1>
+        <p>
+            SEASON: {{ season }} {{ year }} |
+            SOURCE: ANILIST |
+            NODES: {{ total_items }}
+        </p>
+    </div>
+
+    <div class="hero-meta">
+        Discovery Mode: Online<br>
+        Local Archive: MyAnimeList
+    </div>
+</header>
+
+<section class="panel">
+    <header class="panel-header">
+        <h2 class="panel-title">Season Controls</h2>
+        <span class="panel-title">Broadcast Query</span>
+    </header>
+
+    <div class="panel-body">
+        <form class="seasonal-filter-form" method="get">
+            <label>
+                Season
+                <select class="command-select" name="season">
+                    {% for option in season_options %}
+                        <option value="{{ option }}" {% if option == season %}selected{% endif %}>
+                            {{ option }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </label>
+
+            <label>
+                Year
+                <select class="command-select" name="year">
+                    {% for option in year_options %}
+                        <option value="{{ option }}" {% if option == year %}selected{% endif %}>
+                            {{ option }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </label>
+
+            <label>
+                Format
+                <select class="command-select" name="format">
+                    {% for option in format_options %}
+                        <option value="{{ option }}" {% if option == format_filter %}selected{% endif %}>
+                            {{ option|upper }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </label>
+
+            <label>
+                Local
+                <select class="command-select" name="local">
+                    {% for value, label in local_filter_options %}
+                        <option value="{{ value }}" {% if value == local_filter %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </label>
+
+            <button class="secondary-button" type="submit">
+                Apply Filters
+            </button>
+        </form>
+    </div>
+</section>
+
+<section class="panel">
+    <header class="panel-header">
+        <h2 class="panel-title">Seasonal Nodes</h2>
+        <span class="panel-title">{{ total_items }} Results</span>
+    </header>
+
+    <div class="panel-body">
+        {% if items %}
+            <div class="seasonal-grid">
+                {% for item in items %}
+                    {% with seasonal=item.seasonal local_entry=item.local_entry %}
+                        <article class="seasonal-card">
+                            {% if seasonal.cover_image_url %}
+                                <img
+                                    class="seasonal-cover"
+                                    src="{{ seasonal.cover_image_url }}"
+                                    alt="{{ seasonal.display_title }}"
+                                >
+                            {% else %}
+                                <div class="seasonal-cover seasonal-cover-empty"></div>
+                            {% endif %}
+
+                            <div class="seasonal-card-body">
+                                <div class="relation-card-kicker">
+                                    {{ seasonal.format|default:"UNKNOWN" }}
+                                </div>
+
+                                <h3 class="relation-card-title">
+                                    {% if seasonal.mal_id %}
+                                        <a href="{% url 'anime_relations_detail' seasonal.mal_id %}">
+                                            {{ seasonal.display_title }}
+                                        </a>
+                                    {% else %}
+                                        {{ seasonal.display_title }}
+                                    {% endif %}
+                                </h3>
+
+                                <div class="archive-meta">
+                                    AniList ID: {{ seasonal.anilist_id }}
+                                    {% if seasonal.mal_id %}
+                                        · MAL ID: {{ seasonal.mal_id }}
+                                    {% endif %}
+                                </div>
+
+                                <div class="relation-stats">
+                                    <span>STATUS: {{ seasonal.status|default:"-" }}</span>
+                                    <span>EPISODES: {{ seasonal.episodes|default:"TBD" }}</span>
+                                    {% if seasonal.next_airing_episode %}
+                                        <span>NEXT: EP {{ seasonal.next_airing_episode }}</span>
+                                    {% else %}
+                                        <span>NEXT: -</span>
+                                    {% endif %}
+                                </div>
+
+                                <div class="relation-badges">
+                                    {% if local_entry %}
+                                        <span class="status-pill status-live">LOCAL NODE</span>
+                                        <span class="status-pill status-live">
+                                            {{ local_entry.personal_status_label|upper }}
+                                        </span>
+                                    {% else %}
+                                        <span class="status-pill">NOT LOCAL</span>
+                                    {% endif %}
+
+                                    {% if seasonal.status == "RELEASING" %}
+                                        <span class="status-pill status-live">LIVE</span>
+                                    {% elif seasonal.status == "NOT_YET_RELEASED" %}
+                                        <span class="status-pill status-paused">QUEUED</span>
+                                    {% elif seasonal.status == "FINISHED" %}
+                                        <span class="status-pill status-paused">FINISHED</span>
+                                    {% else %}
+                                        <span class="status-pill">{{ seasonal.status|default:"-" }}</span>
+                                    {% endif %}
+
+                                    {% if seasonal.studios %}
+                                        <span class="status-pill">
+                                            {{ seasonal.studios.0 }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+
+                                {% if seasonal.genres %}
+                                    <div class="seasonal-genres">
+                                        {% for genre in seasonal.genres|slice:":4" %}
+                                            <span>{{ genre }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </article>
+                    {% endwith %}
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="empty-state">
+                No seasonal anime found. Sync this season first.
+            </p>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

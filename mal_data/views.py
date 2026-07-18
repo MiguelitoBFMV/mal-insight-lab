@@ -13,6 +13,7 @@ from mal_data.models import (
     AnimeRelation,
     AnimeSyncEvent,
     ManualTrackedAnime,
+    SeasonalAnime
 )
 from mal_data.services.anime_relations_sync import sync_anime_relations
 from mal_data.services.anime_list_sync import sync_all_anime_statuses
@@ -697,3 +698,91 @@ def rescue_anime_from_search_view(request):
         messages.error(request, f"Rescue failed: {error}")
 
     return redirect("anime_search")
+
+def seasonal_board(request):
+    season = request.GET.get("season", "SUMMER").upper()
+    year = int(request.GET.get("year", 2026))
+    format_filter = request.GET.get("format", "all")
+    local_filter = request.GET.get("local", "all")
+
+    seasonal_anime = SeasonalAnime.objects.filter(
+        season=season,
+        season_year=year,
+    )
+
+    if format_filter != "all":
+        seasonal_anime = seasonal_anime.filter(format=format_filter.upper())
+
+    anime_entries_by_mal_id = {
+        anime.mal_id: anime
+        for anime in AnimeEntry.objects.filter(
+            mal_id__in=[
+                item.mal_id
+                for item in seasonal_anime
+                if item.mal_id
+            ]
+        )
+    }
+
+    enriched_items = []
+
+    for item in seasonal_anime:
+        local_entry = None
+
+        if item.mal_id:
+            local_entry = anime_entries_by_mal_id.get(item.mal_id)
+
+        if local_filter == "in_list" and not local_entry:
+            continue
+
+        if local_filter == "not_in_list" and local_entry:
+            continue
+
+        if local_filter in {
+            "watching",
+            "completed",
+            "on_hold",
+            "dropped",
+            "plan_to_watch",
+        }:
+            if not local_entry or local_entry.list_status != local_filter:
+                continue
+
+        enriched_items.append(
+            {
+                "seasonal": item,
+                "local_entry": local_entry,
+            }
+        )
+
+    context = {
+        "season": season,
+        "year": year,
+        "format_filter": format_filter,
+        "local_filter": local_filter,
+        "season_options": ["WINTER", "SPRING", "SUMMER", "FALL"],
+        "year_options": range(year - 2, year + 3),
+        "format_options": [
+            "all",
+            "TV",
+            "TV_SHORT",
+            "MOVIE",
+            "SPECIAL",
+            "OVA",
+            "ONA",
+            "MUSIC",
+        ],
+        "local_filter_options": [
+            ("all", "All"),
+            ("in_list", "In my list"),
+            ("not_in_list", "Not in my list"),
+            ("watching", "Watching"),
+            ("plan_to_watch", "Plan to Watch"),
+            ("completed", "Completed"),
+        ],
+        "items": enriched_items,
+        "total_items": len(enriched_items),
+    }
+
+    return render(request, "mal_data/seasonal_board.html", context)
+

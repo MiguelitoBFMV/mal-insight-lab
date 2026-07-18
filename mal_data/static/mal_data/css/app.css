@@ -1128,3 +1128,88 @@ button.danger-button:hover {
         grid-template-columns: 1fr;
     }
 }
+
+.seasonal-filter-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: end;
+}
+
+.seasonal-filter-form label {
+    display: grid;
+    gap: 6px;
+    color: var(--blue);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.seasonal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    gap: 14px;
+}
+
+.seasonal-card {
+    border: 1px solid var(--border-soft);
+    background: rgba(255, 255, 255, 0.015);
+    display: grid;
+    grid-template-columns: 94px 1fr;
+    gap: 14px;
+    padding: 14px;
+    min-height: 160px;
+}
+
+.seasonal-card:hover {
+    border-color: var(--border);
+    background: rgba(169, 193, 255, 0.04);
+}
+
+.seasonal-cover {
+    width: 94px;
+    height: 132px;
+    object-fit: cover;
+    border: 1px solid var(--border);
+    background: var(--panel-muted);
+}
+
+.seasonal-cover-empty {
+    display: block;
+}
+
+.seasonal-card-body {
+    min-width: 0;
+}
+
+.seasonal-genres {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+.seasonal-genres span {
+    border: 1px solid var(--border-soft);
+    padding: 4px 8px;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+}
+
+@media (max-width: 760px) {
+    .seasonal-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .seasonal-card {
+        grid-template-columns: 76px 1fr;
+    }
+
+    .seasonal-cover {
+        width: 76px;
+        height: 108px;
+    }
+}

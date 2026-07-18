@@ -68,7 +68,6 @@ class AniListClient:
 
         return payload.get("data", {}).get("Media")
     
-
     def search_anime(self, search):
         query = """
         query ($search: String!) {
@@ -171,3 +170,87 @@ class AniListClient:
             raise Exception(payload["errors"])
 
         return payload.get("data", {}).get("Page", {}).get("media", [])
+
+    def fetch_seasonal_anime(self, season, season_year, page=1, per_page=50):
+        query = """
+        query ($season: MediaSeason, $seasonYear: Int, $page: Int, $perPage: Int) {
+        Page(page: $page, perPage: $perPage) {
+            pageInfo {
+            currentPage
+            hasNextPage
+            lastPage
+            total
+            }
+            media(
+            season: $season,
+            seasonYear: $seasonYear,
+            type: ANIME,
+            sort: POPULARITY_DESC
+            ) {
+            id
+            idMal
+            title {
+                romaji
+                english
+                native
+            }
+            coverImage {
+                large
+                medium
+            }
+            season
+            seasonYear
+            format
+            status
+            episodes
+            duration
+            genres
+            studios(isMain: true) {
+                nodes {
+                name
+                }
+            }
+            nextAiringEpisode {
+                episode
+                airingAt
+                timeUntilAiring
+            }
+            externalLinks {
+                site
+                url
+                type
+                language
+            }
+            }
+        }
+        }
+        """
+
+        variables = {
+            "season": season.upper(),
+            "seasonYear": season_year,
+            "page": page,
+            "perPage": per_page,
+        }
+
+        response = requests.post(
+            self.API_URL,
+            json={
+                "query": query,
+                "variables": variables,
+            },
+            timeout=30,
+        )
+
+        if not response.ok:
+            raise Exception(
+                f"AniList API error {response.status_code}: {response.text}"
+            )
+
+        payload = response.json()
+
+        if "errors" in payload:
+            raise Exception(payload["errors"])
+
+        return payload.get("data", {}).get("Page")
+    

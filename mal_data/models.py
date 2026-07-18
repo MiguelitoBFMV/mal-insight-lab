@@ -405,3 +405,33 @@ class AnimeMetadata(models.Model):
     def display_title(self):
         return self.title_english or self.title or self.title_japanese or f"MAL #{self.mal_id}"
 
+class SeasonalAnime(models.Model):
+    anilist_id = models.PositiveIntegerField(unique=True)
+    mal_id = models.PositiveIntegerField(blank=True, null=True)
+
+    title_romaji = models.CharField(max_length=255)
+    title_english = models.CharField(max_length=255, blank=True)
+    title_native = models.CharField(max_length=255, blank=True)
+
+    cover_image_url = models.URLField(blank=True)
+
+    season = models.CharField(max_length=20)
+    season_year = models.PositiveIntegerField()
+
+    format = models.CharField(max_length=50, blank=True)
+    status = models.CharField(max_length=50, blank=True)
+    episodes = models.PositiveIntegerField(default=0)
+
+    next_airing_episode = models.PositiveIntegerField(blank=True, null=True)
+    next_airing_at = models.DateTimeField(blank=True, null=True)
+
+    genres = models.JSONField(default=list, blank=True)
+    studios = models.JSONField(default=list, blank=True)
+    external_links = models.JSONField(default=list, blank=True)
+
+    raw_data = models.JSONField(default=dict, blank=True)
+    last_synced_at = models.DateTimeField(default=timezone.now)
+
+    @property
+    def display_title(self):
+        return self.title_english or self.title_romaji or self.title_native or f"AniList #{self.anilist_id}"
