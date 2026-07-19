@@ -162,42 +162,48 @@
                                 {% endif %}
 
                                 {% if result.mal_id %}
-                                    <form method="post" action="{% url 'mal_insights:rescue_anime_from_search' %}">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="mal_id" value="{{ result.mal_id }}">
-                                        <input type="hidden" name="title_snapshot" value="{{ result.title.romaji|default:'' }}">
+                                    {% if user.is_authenticated %}
+                                        <form method="post" action="{% url 'mal_insights:rescue_anime_from_search' %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="mal_id" value="{{ result.mal_id }}">
+                                            <input type="hidden" name="title_snapshot" value="{{ result.title.romaji|default:'' }}">
 
-                                        <select class="command-select" name="status">
-                                            <option value="watching">Watching</option>
-                                            <option value="plan_to_watch">Plan to Watch</option>
-                                            <option value="on_hold">On Hold</option>
-                                            <option value="completed">Completed</option>
-                                            <option value="dropped">Dropped</option>
-                                        </select>
+                                            <select class="command-select" name="status">
+                                                <option value="watching">Watching</option>
+                                                <option value="plan_to_watch">Plan to Watch</option>
+                                                <option value="on_hold">On Hold</option>
+                                                <option value="completed">Completed</option>
+                                                <option value="dropped">Dropped</option>
+                                            </select>
 
-                                        <input
-                                            class="small-command-input"
-                                            type="number"
-                                            min="0"
-                                            name="episodes_watched"
-                                            value="{% if result.local_entry %}{{ result.local_entry.num_episodes_watched }}{% else %}0{% endif %}"
-                                            aria-label="Episodes watched"
-                                        >
+                                            <input
+                                                class="small-command-input"
+                                                type="number"
+                                                min="0"
+                                                name="episodes_watched"
+                                                value="{% if result.local_entry %}{{ result.local_entry.num_episodes_watched }}{% else %}0{% endif %}"
+                                                aria-label="Episodes watched"
+                                            >
 
-                                        <input
-                                            class="small-command-input"
-                                            type="number"
-                                            min="0"
-                                            max="10"
-                                            name="score"
-                                            value="{% if result.local_entry %}{{ result.local_entry.score }}{% else %}0{% endif %}"
-                                            aria-label="Score"
-                                        >
+                                            <input
+                                                class="small-command-input"
+                                                type="number"
+                                                min="0"
+                                                max="10"
+                                                name="score"
+                                                value="{% if result.local_entry %}{{ result.local_entry.score }}{% else %}0{% endif %}"
+                                                aria-label="Score"
+                                            >
 
-                                        <button class="secondary-button compact-button" type="submit">
-                                            Rescue / Track
-                                        </button>
-                                    </form>
+                                            <button class="secondary-button compact-button" type="submit">
+                                                Rescue / Track
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <span class="read-only-notice">
+                                            Login to rescue
+                                        </span>
+                                    {% endif %}
                                 {% else %}
                                     <span class="archive-meta">
                                         Rescue disabled: no MAL ID.

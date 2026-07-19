@@ -90,16 +90,22 @@
                 </button>
             </form>
 
-            <form class="sync-board-form" method="post" action="{% url 'mal_insights:sync_seasonal_board' %}">
-                {% csrf_token %}
-                <input type="hidden" name="season" value="{{ season }}">
-                <input type="hidden" name="year" value="{{ year }}">
-                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            {% if user.is_authenticated %}
+                <form class="sync-board-form" method="post" action="{% url 'mal_insights:sync_seasonal_board' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="season" value="{{ season }}">
+                    <input type="hidden" name="year" value="{{ year }}">
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
 
-                <button type="submit" class="command-button command-button-primary sync-board-button">
-                    Sync Board
-                </button>
-            </form>
+                    <button type="submit" class="command-button command-button-primary sync-board-button">
+                        Sync Board
+                    </button>
+                </form>
+            {% else %}
+                <span class="read-only-notice">
+                    Board sync locked
+                </span>
+            {% endif %}
         </div>
     </div>
 </section>
@@ -224,16 +230,22 @@
                                             Open Node
                                         </a>
                                     {% elif seasonal.mal_id %}
-                                        <form method="post" action="action="{% url 'mal_insights:add_seasonal_to_plan' %}">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="mal_id" value="{{ seasonal.mal_id }}">
-                                            <input type="hidden" name="title_snapshot" value="{{ seasonal.display_title }}">
-                                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                        {% if user.is_authenticated %}
+                                            <form method="post" action="action="{% url 'mal_insights:add_seasonal_to_plan' %}">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="mal_id" value="{{ seasonal.mal_id }}">
+                                                <input type="hidden" name="title_snapshot" value="{{ seasonal.display_title }}">
+                                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
 
-                                            <button class="secondary-button compact-button" type="submit">
-                                                Add to Plan
-                                            </button>
-                                        </form>
+                                                <button class="secondary-button compact-button" type="submit">
+                                                    Add to Plan
+                                                </button>
+                                            </form>
+                                        {% else %}
+                                            <span class="read-only-notice">
+                                                Login to add
+                                            </span>
+                                        {% endif %}
                                     {% else %}
                                         <span class="status-pill status-not-local">
                                             NO MAL ID

@@ -48,12 +48,25 @@
                     <div class="progress-fill" style="width: 100%;"></div>
                 </div>
 
-                <form method="post" action="{% url 'mal_insights:sync_anime_list' %}">
-                    {% csrf_token %}
-                    <button type="submit" class="command-button">
-                        Manual Resync
-                    </button>
-                </form>
+                {% if user.is_authenticated %}
+                    <form
+                        method="post"
+                        action="{% url 'mal_insights:sync_anime_list' %}"
+                    >
+                        {% csrf_token %}
+
+                        <button
+                            class="primary-button sync-button"
+                            type="submit"
+                        >
+                            Manual Resync
+                        </button>
+                    </form>
+                {% else %}
+                    <p class="read-only-notice">
+                        Login required for synchronization
+                    </p>
+                {% endif %}
             </div>
         </section>
 

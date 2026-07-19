@@ -51,12 +51,18 @@
     </header>
 
     <div class="panel-body relation-actions-bar">
-        <form method="post" action="{% url 'mal_insights:sync_anime_relations' mal_id %}">
-            {% csrf_token %}
-            <button class="command-button relation-sync-button" type="submit">
-                Update Relations From MAL
-            </button>
-        </form>
+        {% if user.is_authenticated %}
+            <form method="post" action="{% url 'mal_insights:sync_anime_relations' mal_id %}">
+                {% csrf_token %}
+                <button class="command-button relation-sync-button" type="submit">
+                    Update Relations From MAL
+                </button>
+            </form>
+        {% else %}
+            <span class="read-only-notice">
+                Relation sync locked
+            </span>
+        {% endif %}
 
         {% if anime %}
             <a class="secondary-button" href="{% url 'mal_insights:anime_status_list' anime.list_status %}">

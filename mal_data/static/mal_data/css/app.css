@@ -1650,3 +1650,17 @@ button.danger-button:hover {
     border-color: currentColor;
     background: rgba(132, 165, 255, 0.1);
 }
+
+.read-only-notice {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 5px 9px;
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    color: #94a3b8;
+    background: rgba(15, 23, 42, 0.42);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}

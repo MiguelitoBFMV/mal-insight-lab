@@ -6,6 +6,8 @@ from django.contrib import messages
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.db.models import Case, IntegerField, Q, Value, When
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 
 from mal_data.models import (
     AnimeAiringData,
@@ -21,7 +23,6 @@ from mal_data.services.anime_list_sync import sync_all_anime_statuses, upsert_an
 from mal_data.services.anilist_airing_sync import sync_airing_data_for_dashboard
 from mal_data.services.anilist_client import AniListClient
 from mal_data.services.manual_tracked_sync import sync_manual_tracked_anime_entries, sync_manual_tracked_anime_entry
-from mal_data.services.anime_metadata_sync import sync_anime_metadata
 from mal_data.services.mal_client import MyAnimeListClient
 from mal_data.services.seasonal_sync import sync_seasonal_anime, sync_tba_upcoming_anime
 
@@ -501,29 +502,16 @@ def anime_status_list(request, status):
 
 def anime_relations_detail(request, mal_id):
     anime = AnimeEntry.objects.filter(mal_id=mal_id).first()
+
     anime_metadata = None
 
     if anime is None:
-        anime_metadata = AnimeMetadata.objects.filter(mal_id=mal_id).first()
-
-        if anime_metadata is None:
-            try:
-                anime_metadata, _ = sync_anime_metadata(mal_id)
-            except Exception:
-                anime_metadata = None
-
-    existing_relations = AnimeRelation.objects.filter(
-        source_mal_id=mal_id
-    ).exists()
+        anime_metadata = AnimeMetadata.objects.filter(
+            mal_id=mal_id
+        ).first()
 
     sync_result = None
     sync_error = None
-
-    if not existing_relations:
-        try:
-            sync_result = sync_anime_relations(mal_id)
-        except Exception as error:
-            sync_error = str(error)
 
     def relation_sort_key(relation):
         relation_type_priority = {
@@ -711,9 +699,9 @@ def anime_relations_detail(request, mal_id):
 
     return render(request, "mal_data/anime_relations_detail.html", context)
 
+@login_required
+@require_POST
 def sync_anime_relations_view(request, mal_id):
-    if request.method != "POST":
-        return redirect("mal_insights:anime_relations_detail", mal_id=mal_id)
 
     try:
         result = sync_anime_relations(mal_id)
@@ -734,9 +722,9 @@ def sync_anime_relations_view(request, mal_id):
 
     return redirect("mal_insights:anime_relations_detail", mal_id=mal_id)
 
+@login_required
+@require_POST
 def sync_anime_list_view(request):
-    if request.method != "POST":
-        return redirect("mal_insights:dashboard")
 
     try:
         results = sync_all_anime_statuses()
@@ -847,9 +835,9 @@ def anime_search_view(request):
 
     return render(request, "mal_data/anime_search.html", context)
 
+@login_required
+@require_POST
 def rescue_anime_from_search_view(request):
-    if request.method != "POST":
-        return redirect("mal_insights:anime_search")
 
     mal_id = request.POST.get("mal_id")
     title_snapshot = request.POST.get("title_snapshot", "").strip()
@@ -1050,9 +1038,9 @@ def seasonal_board(request):
 
     return render(request, "mal_data/seasonal_board.html", context)
 
+@login_required
+@require_POST
 def sync_seasonal_board_view(request):
-    if request.method != "POST":
-        return redirect("mal_insights:seasonal_board")
 
     valid_seasons = ["WINTER", "SPRING", "SUMMER", "FALL"]
 
@@ -1105,9 +1093,9 @@ def sync_seasonal_board_view(request):
 
     return redirect(next_url)
 
+@login_required
+@require_POST
 def add_seasonal_to_plan_view(request):
-    if request.method != "POST":
-        return redirect("mal_insights:seasonal_board")
 
     mal_id = request.POST.get("mal_id")
     next_url = request.POST.get("next") or "mal_insights:seasonal_board"
