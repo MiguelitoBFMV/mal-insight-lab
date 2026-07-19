@@ -34,6 +34,54 @@
                 consumir, registrar lo que realmente hago y analizar
                 cómo avanzo en juegos, anime y manga.
             </p>
+
+            <section
+                class="platform-access"
+                aria-label="Estado de acceso"
+            >
+                {% if user.is_authenticated %}
+                    <div class="access-copy">
+                        <span class="access-label">
+                            Sesión propietaria
+                        </span>
+
+                        <strong class="access-value">
+                            {{ user.username }}
+                        </strong>
+                    </div>
+
+                    <form
+                        method="post"
+                        action="{% url 'logout' %}"
+                    >
+                        {% csrf_token %}
+
+                        <button
+                            class="access-button access-button--logout"
+                            type="submit"
+                        >
+                            Cerrar sesión
+                        </button>
+                    </form>
+                {% else %}
+                    <div class="access-copy">
+                        <span class="access-label">
+                            Acceso público
+                        </span>
+
+                        <strong class="access-value">
+                            Modo lectura
+                        </strong>
+                    </div>
+
+                    <a
+                        class="access-button"
+                        href="{% url 'login' %}"
+                    >
+                        Iniciar sesión
+                    </a>
+                {% endif %}
+            </section>
         </header>
 
         <section

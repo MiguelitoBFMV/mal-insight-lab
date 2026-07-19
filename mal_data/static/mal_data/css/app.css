@@ -1613,3 +1613,40 @@ button.danger-button:hover {
  overflow-wrap: anywhere;
  word-break: normal;
 }
+
+.network-state {
+    display: grid;
+    justify-items: end;
+    gap: 3px;
+}
+
+.network-state strong {
+    text-transform: none;
+}
+
+.topbar-auth-form {
+    margin: 0;
+}
+
+.topbar-auth-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 24px;
+    padding: 2px 8px;
+    border: 1px solid rgba(132, 165, 255, 0.42);
+    color: var(--accent, #84a5ff);
+    background: transparent;
+    font: inherit;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-decoration: none;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.topbar-auth-action:hover {
+    border-color: currentColor;
+    background: rgba(132, 165, 255, 0.1);
+}

@@ -1,0 +1,86 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Iniciar sesión · MVS Tracker</title>
+
+    <link
+        rel="stylesheet"
+        href="{% static 'core/home.css' %}"
+    >
+</head>
+
+<body>
+    <main class="auth-page">
+        <section class="auth-panel">
+            <header class="auth-header">
+                <p class="platform-eyebrow">
+                    Owner Access
+                </p>
+
+                <h1 class="auth-title">
+                    MVS Tracker
+                </h1>
+
+                <p class="auth-description">
+                    Inicia sesión para sincronizar, editar y registrar
+                    actividad. Sin una cuenta, la plataforma permanece
+                    disponible en modo lectura.
+                </p>
+            </header>
+
+            {% if form.errors %}
+                <p class="auth-error">
+                    El usuario o la contraseña no son correctos.
+                </p>
+            {% endif %}
+
+            <form method="post" class="auth-form">
+                {% csrf_token %}
+
+                <div class="auth-field">
+                    <label for="{{ form.username.id_for_label }}">
+                        Usuario
+                    </label>
+
+                    {{ form.username }}
+                </div>
+
+                <div class="auth-field">
+                    <label for="{{ form.password.id_for_label }}">
+                        Contraseña
+                    </label>
+
+                    {{ form.password }}
+                </div>
+
+                {% if next %}
+                    <input
+                        type="hidden"
+                        name="next"
+                        value="{{ next }}"
+                    >
+                {% endif %}
+
+                <button type="submit" class="auth-submit">
+                    Iniciar sesión
+                </button>
+            </form>
+
+            <footer class="auth-footer">
+                <a href="{% url 'core:home' %}">
+                    ← Volver a MVS Tracker
+                </a>
+            </footer>
+        </section>
+    </main>
+</body>
+</html>
