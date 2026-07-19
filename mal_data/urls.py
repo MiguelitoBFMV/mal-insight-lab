@@ -2,6 +2,7 @@ from django.urls import path
 
 from . import views
 from .web import library as library_views
+from .web import search as search_views
 
 app_name = "mal_insights"
 
@@ -31,12 +32,12 @@ urlpatterns = [
     ),
     path(
         "search/",
-        views.anime_search_view,
+        search_views.anime_search_view,
         name="anime_search",
     ),
     path(
         "search/rescue/",
-        views.rescue_anime_from_search_view,
+        search_views.rescue_anime_from_search_view,
         name="rescue_anime_from_search",
     ),
     path(
