@@ -384,7 +384,7 @@ def anime_status_list(request, status):
         ]
 
         if len(selected_statuses) == 1:
-            return redirect("anime_status_list", status=selected_statuses[0])
+            return redirect("mal_insights:anime_status_list", status=selected_statuses[0])
 
         if not selected_statuses:
             selected_statuses = status_order.copy()
@@ -713,7 +713,7 @@ def anime_relations_detail(request, mal_id):
 
 def sync_anime_relations_view(request, mal_id):
     if request.method != "POST":
-        return redirect("anime_relations_detail", mal_id=mal_id)
+        return redirect("mal_insights:anime_relations_detail", mal_id=mal_id)
 
     try:
         result = sync_anime_relations(mal_id)
@@ -732,11 +732,11 @@ def sync_anime_relations_view(request, mal_id):
             f"No se pudieron actualizar las relaciones: {error}",
         )
 
-    return redirect("anime_relations_detail", mal_id=mal_id)
+    return redirect("mal_insights:anime_relations_detail", mal_id=mal_id)
 
 def sync_anime_list_view(request):
     if request.method != "POST":
-        return redirect("dashboard")
+        return redirect("mal_insights:dashboard")
 
     try:
         results = sync_all_anime_statuses()
@@ -772,7 +772,7 @@ def sync_anime_list_view(request):
             f"Anime sync failed: {error}",
         )
 
-    return redirect("dashboard")
+    return redirect("mal_insights:dashboard")
 
 def anime_search_view(request):
     query = request.GET.get("q", "").strip()
@@ -849,7 +849,7 @@ def anime_search_view(request):
 
 def rescue_anime_from_search_view(request):
     if request.method != "POST":
-        return redirect("anime_search")
+        return redirect("mal_insights:anime_search")
 
     mal_id = request.POST.get("mal_id")
     title_snapshot = request.POST.get("title_snapshot", "").strip()
@@ -859,7 +859,7 @@ def rescue_anime_from_search_view(request):
 
     if not mal_id:
         messages.error(request, "Cannot rescue anime without MAL ID.")
-        return redirect("anime_search")
+        return redirect("mal_insights:anime_search")
 
     try:
         tracked_entry, _ = ManualTrackedAnime.objects.update_or_create(
@@ -886,12 +886,12 @@ def rescue_anime_from_search_view(request):
             ),
         )
 
-        return redirect("anime_relations_detail", mal_id=anime.mal_id)
+        return redirect("mal_insights:anime_relations_detail", mal_id=anime.mal_id)
 
     except Exception as error:
         messages.error(request, f"Rescue failed: {error}")
 
-    return redirect("anime_search")
+    return redirect("mal_insights:anime_search")
 
 def seasonal_board(request):
     valid_seasons = ["ALL", "WINTER", "SPRING", "SUMMER", "FALL"]
@@ -1052,13 +1052,13 @@ def seasonal_board(request):
 
 def sync_seasonal_board_view(request):
     if request.method != "POST":
-        return redirect("seasonal_board")
+        return redirect("mal_insights:seasonal_board")
 
     valid_seasons = ["WINTER", "SPRING", "SUMMER", "FALL"]
 
     season = request.POST.get("season", "SUMMER").upper()
     year = int(request.POST.get("year", 2026))
-    next_url = request.POST.get("next") or "seasonal_board"
+    next_url = request.POST.get("next") or "mal_insights:seasonal_board"
 
     include_tba_bucket = False
 
@@ -1107,10 +1107,10 @@ def sync_seasonal_board_view(request):
 
 def add_seasonal_to_plan_view(request):
     if request.method != "POST":
-        return redirect("seasonal_board")
+        return redirect("mal_insights:seasonal_board")
 
     mal_id = request.POST.get("mal_id")
-    next_url = request.POST.get("next") or "seasonal_board"
+    next_url = request.POST.get("next") or "mal_insights:seasonal_board"
 
     if not mal_id:
         messages.error(request, "Cannot add seasonal anime without MAL ID.")

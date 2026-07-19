@@ -25,20 +25,20 @@
         <nav class="filter-nav" aria-label="Filtros de estado de emisión">
             <span class="filter-label">Airing Status</span>
 
-            <a href="{% url 'anime_status_list' status %}?{% if sort %}sort={{ sort }}{% endif %}{{ selected_statuses_query }}"
+            <a href="{% url 'mal_insights:anime_status_list' status %}?{% if sort %}sort={{ sort }}{% endif %}{{ selected_statuses_query }}"
                 class="filter-chip {% if not airing_filter %}active{% endif %}">All</a>
 
             <a
-                href="{% url 'anime_status_list' status %}?airing=finished_airing{% if sort %}&sort={{ sort }}{% endif %}{{ selected_statuses_query }}"
+                href="{% url 'mal_insights:anime_status_list' status %}?airing=finished_airing{% if sort %}&sort={{ sort }}{% endif %}{{ selected_statuses_query }}"
                 class="filter-chip {% if airing_filter == 'finished_airing' %}active{% endif %}">Finished
             </a>
 
-            <a href="{% url 'anime_status_list' status %}?airing=currently_airing{% if sort %}&sort={{ sort }}{% endif %}{{ selected_statuses_query }}"
+            <a href="{% url 'mal_insights:anime_status_list' status %}?airing=currently_airing{% if sort %}&sort={{ sort }}{% endif %}{{ selected_statuses_query }}"
                 class="filter-chip {% if airing_filter == 'currently_airing' %}active{% endif %}">Airing
             </a>
 
             <a
-                href="{% url 'anime_status_list' status %}?airing=not_yet_aired{% if sort %}&sort={{ sort }}{% endif %}{{ selected_statuses_query }}"
+                href="{% url 'mal_insights:anime_status_list' status %}?airing=not_yet_aired{% if sort %}&sort={{ sort }}{% endif %}{{ selected_statuses_query }}"
                 class="filter-chip {% if airing_filter == 'not_yet_aired' %}active{% endif %}">Queued
             </a>
         </nav>
@@ -162,7 +162,7 @@
                                         {% endif %}
 
                                         <div>
-                                            <a class="archive-title" href="{% url 'anime_relations_detail' anime.mal_id %}">
+                                            <a class="archive-title" href="{% url 'mal_insights:anime_relations_detail' anime.mal_id %}">
                                                 {{ anime.display_title }}
                                             </a>
                                             <div class="archive-meta">
@@ -250,7 +250,7 @@
                                 </td>
 
                                 <td>
-                                    <a class="secondary-button compact-button" href="{% url 'anime_relations_detail' anime.mal_id %}">
+                                    <a class="secondary-button compact-button" href="{% url 'mal_insights:anime_relations_detail' anime.mal_id %}">
                                         Scan
                                     </a>
                                 </td>

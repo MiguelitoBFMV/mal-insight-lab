@@ -48,7 +48,7 @@
                     <div class="progress-fill" style="width: 100%;"></div>
                 </div>
 
-                <form method="post" action="{% url 'sync_anime_list' %}">
+                <form method="post" action="{% url 'mal_insights:sync_anime_list' %}">
                     {% csrf_token %}
                     <button type="submit" class="command-button">
                         Manual Resync
@@ -95,7 +95,7 @@
                     <p class="jp-title">{{ spotlight_anime.title_japanese }}</p>
                     <p class="jp-romaji">{{ spotlight_anime.title }}</p>
                     <p>
-                        <a class="secondary-button" href="{% url 'anime_relations_detail' spotlight_anime.mal_id %}">
+                        <a class="secondary-button" href="{% url 'mal_insights:anime_relations_detail' spotlight_anime.mal_id %}">
                             Show Node
                         </a>
                     </p>
@@ -110,7 +110,7 @@
         <section class="panel">
             <header class="panel-header">
                 <h2 class="panel-title">Episode Signals</h2>
-                <a class="panel-link" href="{% url 'anime_status_list' 'watching' %}">
+                <a class="panel-link" href="{% url 'mal_insights:anime_status_list' 'watching' %}">
                     View All
                 </a>
             </header>
@@ -129,7 +129,7 @@
 
                                     <div>
                                         <h3 class="protocol-title">
-                                            <a href="{% url 'anime_relations_detail' anime.mal_id %}">
+                                            <a href="{% url 'mal_insights:anime_relations_detail' anime.mal_id %}">
                                                 {{ anime.display_title }}
                                             </a>
                                         </h3>
@@ -193,7 +193,7 @@
                                                 </span>
                                             {% endif %}
 
-                                            <a class="secondary-button" href="{% url 'anime_relations_detail' anime.mal_id %}">
+                                            <a class="secondary-button" href="{% url 'mal_insights:anime_relations_detail' anime.mal_id %}">
                                                 Details
                                             </a>
                                         </div>
@@ -223,7 +223,7 @@
 
                                 <div>
                                     <h3 class="protocol-title">
-                                        <a href="{% url 'anime_relations_detail' anime.mal_id %}">
+                                        <a href="{% url 'mal_insights:anime_relations_detail' anime.mal_id %}">
                                             {{ anime.display_title }}
                                         </a>
                                     </h3>
@@ -271,7 +271,7 @@
                                             <span class="status-pill status-paused">{{ anime.airing_status|default:"Unknown" }}</span>
                                         {% endif %}
 
-                                        <a class="secondary-button" href="{% url 'anime_relations_detail' anime.mal_id %}">
+                                        <a class="secondary-button" href="{% url 'mal_insights:anime_relations_detail' anime.mal_id %}">
                                             Details
                                         </a>
                                     </div>
@@ -344,7 +344,7 @@
                                     <time>[{{ event.created_at|date:"H:i:s" }}]</time>
 
                                     {% if event.anime %}
-                                        <a href="{% url 'anime_relations_detail' event.anime.mal_id %}">
+                                        <a href="{% url 'mal_insights:anime_relations_detail' event.anime.mal_id %}">
                                             &gt;&gt;&gt;
                                             {% if event.event_type == "episode_changed" %}
                                                 EP_UPDATE:
@@ -386,7 +386,7 @@
                                 <article class="signal-item sequel-radar-item">
                                     <a
                                         class="sequel-radar-title"
-                                        href="{% url 'anime_relations_detail' recommendation.target_mal_id %}"
+                                        href="{% url 'mal_insights:anime_relations_detail' recommendation.target_mal_id %}"
                                         title="{{ recommendation.target_title }}"
                                     >
                                         >>> NEXT_SIGNAL: {{ recommendation.target_compact_title }}
@@ -418,7 +418,7 @@
                         <ul class="command-log">
                             {% for anime in broadcast_watchlist_entries %}
                                 <li>
-                                    <a href="{% url 'anime_relations_detail' anime.mal_id %}">
+                                    <a href="{% url 'mal_insights:anime_relations_detail' anime.mal_id %}">
                                         &gt;&gt;&gt; AIRING_ALERT:
                                         {{ anime.display_title }}
                                     </a>

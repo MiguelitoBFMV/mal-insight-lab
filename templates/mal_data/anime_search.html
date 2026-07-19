@@ -22,7 +22,7 @@
     </header>
 
     <div class="panel-body">
-        <form class="search-form" method="get" action="{% url 'anime_search' %}">
+        <form class="search-form" method="get" action="{% url 'mal_insights:anime_search' %}">
             <label class="sr-only" for="q">Anime title</label>
             <input
                 id="q"
@@ -156,13 +156,13 @@
 
                             <div class="search-actions">
                                 {% if result.local_entry %}
-                                    <a class="secondary-button compact-button" href="{% url 'anime_relations_detail' result.local_entry.mal_id %}">
+                                    <a class="secondary-button compact-button" href="{% url 'mal_insights:anime_relations_detail' result.local_entry.mal_id %}">
                                         Open Local Node
                                     </a>
                                 {% endif %}
 
                                 {% if result.mal_id %}
-                                    <form method="post" action="{% url 'rescue_anime_from_search' %}">
+                                    <form method="post" action="{% url 'mal_insights:rescue_anime_from_search' %}">
                                         {% csrf_token %}
                                         <input type="hidden" name="mal_id" value="{{ result.mal_id }}">
                                         <input type="hidden" name="title_snapshot" value="{{ result.title.romaji|default:'' }}">
