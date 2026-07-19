@@ -1,7 +1,7 @@
 from django.urls import path
 
 from . import views
-
+from .web import library as library_views
 
 app_name = "mal_insights"
 
@@ -11,7 +11,7 @@ urlpatterns = [
 
     path(
         "status/<str:status>/",
-        views.anime_status_list,
+        library_views.anime_status_list,
         name="anime_status_list",
     ),
     path(
