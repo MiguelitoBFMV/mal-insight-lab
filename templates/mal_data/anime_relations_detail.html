@@ -51,20 +51,26 @@
     </header>
 
     <div class="panel-body relation-actions-bar">
-        <form method="post" action="{% url 'sync_anime_relations' mal_id %}">
-            {% csrf_token %}
-            <button class="command-button relation-sync-button" type="submit">
-                Update Relations From MAL
-            </button>
-        </form>
+        {% if user.is_authenticated %}
+            <form method="post" action="{% url 'mal_insights:sync_anime_relations' mal_id %}">
+                {% csrf_token %}
+                <button class="command-button relation-sync-button" type="submit">
+                    Update Relations From MAL
+                </button>
+            </form>
+        {% else %}
+            <span class="read-only-notice">
+                Relation sync locked
+            </span>
+        {% endif %}
 
         {% if anime %}
-            <a class="secondary-button" href="{% url 'anime_status_list' anime.list_status %}">
+            <a class="secondary-button" href="{% url 'mal_insights:anime_status_list' anime.list_status %}">
                 Back To {{ anime.personal_status_label }}
             </a>
         {% endif %}
 
-        <a class="secondary-button" href="{% url 'dashboard' %}">
+        <a class="secondary-button" href="{% url 'mal_insights:dashboard' %}">
             Dashboard
         </a>
     </div>
@@ -85,7 +91,7 @@
                 <ul class="audit-list">
                     {% for relation in franchise_audit.local_priority_nodes|slice:":6" %}
                         <li>
-                            <a href="{% url 'anime_relations_detail' relation.target_mal_id %}">
+                            <a href="{% url 'mal_insights:anime_relations_detail' relation.target_mal_id %}">
                                 {{ relation.target_display_title }}
                             </a>
                             <span>{{ relation.target_display_status }} · {{ relation.target_display_media_type|upper }}</span>
@@ -105,7 +111,7 @@
                 <ul class="audit-list">
                     {% for relation in franchise_audit.local_completed_nodes|slice:":6" %}
                         <li>
-                            <a href="{% url 'anime_relations_detail' relation.target_mal_id %}">
+                            <a href="{% url 'mal_insights:anime_relations_detail' relation.target_mal_id %}">
                                 {{ relation.target_display_title }}
                             </a>
                             <span>Score {{ relation.target_display_score }} · {{ relation.target_display_media_type|upper }}</span>
@@ -125,7 +131,7 @@
                 <ul class="audit-list">
                     {% for relation in franchise_audit.external_priority_nodes|slice:":6" %}
                         <li>
-                            <a href="{% url 'anime_relations_detail' relation.target_mal_id %}">
+                            <a href="{% url 'mal_insights:anime_relations_detail' relation.target_mal_id %}">
                                 {{ relation.target_display_title }}
                             </a>
                             <span>{{ relation.relation_type_formatted|default:relation.relation_type }} · {{ relation.target_display_media_type|upper }}</span>
@@ -145,7 +151,7 @@
                 <ul class="audit-list">
                     {% for relation in franchise_audit.external_low_priority_nodes|slice:":6" %}
                         <li>
-                            <a href="{% url 'anime_relations_detail' relation.target_mal_id %}">
+                            <a href="{% url 'mal_insights:anime_relations_detail' relation.target_mal_id %}">
                                 {{ relation.target_display_title }}
                             </a>
                             <span>{{ relation.relation_type_formatted|default:relation.relation_type }} · {{ relation.target_display_media_type|upper }}</span>
@@ -165,7 +171,7 @@
                 <ul class="audit-list">
                     {% for relation in franchise_audit.unknown_nodes|slice:":6" %}
                         <li>
-                            <a href="{% url 'anime_relations_detail' relation.target_mal_id %}">
+                            <a href="{% url 'mal_insights:anime_relations_detail' relation.target_mal_id %}">
                                 {{ relation.target_display_title }}
                             </a>
                             <span>Metadata pending</span>
@@ -204,7 +210,7 @@
                             </div>
 
                             <h3 class="relation-card-title">
-                                <a href="{% url 'anime_relations_detail' relation.target_mal_id %}">
+                                <a href="{% url 'mal_insights:anime_relations_detail' relation.target_mal_id %}">
                                     {{ relation.target_display_title }}
                                 </a>
                             </h3>
@@ -288,7 +294,7 @@
                             </div>
 
                             <div class="relation-card-actions">
-                                <a class="secondary-button compact-button" href="{% url 'anime_relations_detail' relation.target_mal_id %}">
+                                <a class="secondary-button compact-button" href="{% url 'mal_insights:anime_relations_detail' relation.target_mal_id %}">
                                     Scan Node
                                 </a>
                             </div>

@@ -1,0 +1,258 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>MVS Tracker</title>
+
+    <link
+        rel="stylesheet"
+        href="{% static 'core/home.css' %}"
+    >
+</head>
+
+<body>
+    <main class="platform">
+        <header class="platform-header">
+            <p class="platform-eyebrow">
+                Personal Media Platform
+            </p>
+
+            <h1 class="platform-title">
+                MVS Tracker
+            </h1>
+
+            <p class="platform-description">
+                Una plataforma personal para organizar lo que quiero
+                consumir, registrar lo que realmente hago y analizar
+                cómo avanzo en juegos, anime y manga.
+            </p>
+
+            <section
+                class="platform-access"
+                aria-label="Estado de acceso"
+            >
+                {% if user.is_authenticated %}
+                    <div class="access-copy">
+                        <span class="access-label">
+                            Sesión propietaria
+                        </span>
+
+                        <strong class="access-value">
+                            {{ user.username }}
+                        </strong>
+                    </div>
+
+                    <form
+                        method="post"
+                        action="{% url 'logout' %}"
+                    >
+                        {% csrf_token %}
+
+                        <button
+                            class="access-button access-button--logout"
+                            type="submit"
+                        >
+                            Cerrar sesión
+                        </button>
+                    </form>
+                {% else %}
+                    <div class="access-copy">
+                        <span class="access-label">
+                            Acceso público
+                        </span>
+
+                        <strong class="access-value">
+                            Modo lectura
+                        </strong>
+                    </div>
+
+                    <a
+                        class="access-button"
+                        href="{% url 'login' %}"
+                    >
+                        Iniciar sesión
+                    </a>
+                {% endif %}
+            </section>
+        </header>
+
+        <section
+            class="module-grid"
+            aria-labelledby="modules-title"
+        >
+            <h2 id="modules-title" hidden>
+                Módulos de MVS Tracker
+            </h2>
+
+            <a
+                class="module-card module-card--anime"
+                href="/anime/"
+            >
+                <article class="module-card-content">
+                    <header class="module-card-top">
+                        <span
+                            class="module-icon"
+                            aria-hidden="true"
+                        >
+                            📺
+                        </span>
+
+                        <span class="module-status">
+                            Disponible
+                        </span>
+                    </header>
+
+                    <section>
+                        <p class="module-category">
+                            Anime y manga
+                        </p>
+
+                        <h2 class="module-title">
+                            MAL Insights
+                        </h2>
+
+                        <p class="module-description">
+                            Biblioteca, progreso, seasonal, relaciones
+                            y análisis para ayudarte a limpiar tu backlog.
+                        </p>
+                    </section>
+
+                    <footer class="module-footer">
+                        <span class="module-footer-text">
+                            Conectado con MyAnimeList
+                        </span>
+
+                        <span class="module-action">
+                            Entrar →
+                        </span>
+                    </footer>
+                </article>
+            </a>
+
+            <article
+                class="
+                    module-card
+                    module-card--games
+                    module-card--disabled
+                "
+            >
+                <div class="module-card-content">
+                    <header class="module-card-top">
+                        <span
+                            class="module-icon"
+                            aria-hidden="true"
+                        >
+                            🎮
+                        </span>
+
+                        <span
+                            class="
+                                module-status
+                                module-status--soon
+                            "
+                        >
+                            Próximamente
+                        </span>
+                    </header>
+
+                    <section>
+                        <p class="module-category">
+                            Videojuegos
+                        </p>
+
+                        <h2 class="module-title">
+                            Game Kiroku
+                        </h2>
+
+                        <p class="module-description">
+                            Biblioteca, wishlist, playthroughs,
+                            plataformas, idiomas, progreso y platinos.
+                        </p>
+                    </section>
+
+                    <footer class="module-footer">
+                        <span class="module-footer-text">
+                            Metadatos importados desde IGDB
+                        </span>
+
+                        <span class="module-action">
+                            En construcción
+                        </span>
+                    </footer>
+                </div>
+            </article>
+
+            <article
+                class="
+                    module-card
+                    module-card--activity
+                    module-card--disabled
+                "
+            >
+                <div class="module-card-content">
+                    <header class="module-card-top">
+                        <span
+                            class="module-icon"
+                            aria-hidden="true"
+                        >
+                            📅
+                        </span>
+
+                        <span
+                            class="
+                                module-status
+                                module-status--soon
+                            "
+                        >
+                            Próximamente
+                        </span>
+                    </header>
+
+                    <section>
+                        <p class="module-category">
+                            Actividad real
+                        </p>
+
+                        <h2 class="module-title">
+                            Registro diario
+                        </h2>
+
+                        <p class="module-description">
+                            Sesiones, calendario y análisis para
+                            comprobar cuánto avanzas realmente cada día.
+                        </p>
+                    </section>
+
+                    <footer class="module-footer">
+                        <span class="module-footer-text">
+                            Juegos, anime y manga
+                        </span>
+
+                        <span class="module-action">
+                            En definición
+                        </span>
+                    </footer>
+                </div>
+            </article>
+        </section>
+
+        <footer class="platform-footer">
+            <span>
+                Una sola plataforma. Tres módulos conectados.
+            </span>
+
+            <span>
+                MVS Tracker · Localhost
+            </span>
+        </footer>
+    </main>
+</body>
+</html>

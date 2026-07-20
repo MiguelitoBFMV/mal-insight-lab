@@ -1613,3 +1613,54 @@ button.danger-button:hover {
  overflow-wrap: anywhere;
  word-break: normal;
 }
+
+.network-state {
+    display: grid;
+    justify-items: end;
+    gap: 3px;
+}
+
+.network-state strong {
+    text-transform: none;
+}
+
+.topbar-auth-form {
+    margin: 0;
+}
+
+.topbar-auth-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 24px;
+    padding: 2px 8px;
+    border: 1px solid rgba(132, 165, 255, 0.42);
+    color: var(--accent, #84a5ff);
+    background: transparent;
+    font: inherit;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-decoration: none;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.topbar-auth-action:hover {
+    border-color: currentColor;
+    background: rgba(132, 165, 255, 0.1);
+}
+
+.read-only-notice {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 5px 9px;
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    color: #94a3b8;
+    background: rgba(15, 23, 42, 0.42);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}

@@ -10,27 +10,96 @@
 <body>
     <div class="command-shell">
         <header class="topbar">
-            <a class="brand" href="{% url 'dashboard' %}">
+            <a class="brand" href="{% url 'mal_insights:dashboard' %}">
                 <span class="brand-icon">⌁</span>
                 <span class="brand-title">MAL INSIGHT LAB</span>
             </a>
 
             <nav class="main-nav" aria-label="Navegación principal">
-                <a href="{% url 'dashboard' %}">Dashboard</a>
-                <a href="{% url 'seasonal_board' %}">Seasonal</a>
-                <a href="{% url 'anime_status_list' 'all' %}">All</a>
-                <a href="{% url 'anime_status_list' 'watching' %}">Watching</a>
-                <a href="{% url 'anime_status_list' 'on_hold' %}">On Hold</a>
-                <a href="{% url 'anime_status_list' 'plan_to_watch' %}">Plan to Watch</a>
-                <a href="{% url 'anime_status_list' 'completed' %}">Completed</a>
-                <a href="{% url 'anime_status_list' 'dropped' %}">Dropped</a>
-                <a href="{% url 'anime_search' %}">Search</a>
-                <a href="/admin/">Admin</a>
+                <a href="{% url 'core:home' %}">MVS Tracker</a>
+
+                <a href="{% url 'mal_insights:dashboard' %}">
+                    Dashboard
+                </a>
+
+                <a href="{% url 'mal_insights:seasonal_board' %}">
+                    Seasonal
+                </a>
+
+                <a href="{% url 'mal_insights:anime_status_list' 'all' %}">
+                    All
+                </a>
+
+                <a href="{% url 'mal_insights:anime_status_list' 'watching' %}">
+                    Watching
+                </a>
+
+                <a href="{% url 'mal_insights:anime_status_list' 'on_hold' %}">
+                    On Hold
+                </a>
+
+                <a href="{% url 'mal_insights:anime_status_list' 'plan_to_watch' %}">
+                    Plan to Watch
+                </a>
+
+                <a href="{% url 'mal_insights:anime_status_list' 'completed' %}">
+                    Completed
+                </a>
+
+                <a href="{% url 'mal_insights:anime_status_list' 'dropped' %}">
+                    Dropped
+                </a>
+
+                <a href="{% url 'mal_insights:anime_search' %}">
+                    Search
+                </a>
+
+                {% if user.is_staff %}
+                    <a href="{% url 'admin:index' %}">
+                        Admin
+                    </a>
+                {% endif %}
             </nav>
 
-            <aside class="network-state" aria-label="Estado de conexión">
-                <span>Network State</span><br>
-                <strong>Encrypted</strong>
+            <aside
+                class="network-state"
+                aria-label="Estado de acceso"
+            >
+                {% if user.is_authenticated %}
+                    <span>Owner Session</span>
+
+                    <strong>
+                        {{ user.username }}
+                    </strong>
+
+                    <form
+                        class="topbar-auth-form"
+                        method="post"
+                        action="{% url 'logout' %}"
+                    >
+                        {% csrf_token %}
+
+                        <button
+                            class="topbar-auth-action"
+                            type="submit"
+                        >
+                            Logout
+                        </button>
+                    </form>
+                {% else %}
+                    <span>Access Mode</span>
+
+                    <strong>
+                        Read Only
+                    </strong>
+
+                    <a
+                        class="topbar-auth-action"
+                        href="{% url 'login' %}?next={{ request.path }}"
+                    >
+                        Login
+                    </a>
+                {% endif %}
             </aside>
         </header>
 
