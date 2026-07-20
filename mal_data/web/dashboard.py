@@ -1,30 +1,15 @@
 from datetime import timedelta
 
-from django.core.paginator import Paginator
-from django.http import Http404
-from django.contrib import messages
-from django.shortcuts import redirect, render
+from django.db.models import Q
+from django.shortcuts import render
 from django.utils import timezone
-from django.db.models import Case, IntegerField, Q, Value, When
-from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_POST
 
 from mal_data.models import (
     AnimeAiringData,
     AnimeEntry,
-    AnimeMetadata,
     AnimeRelation,
     AnimeSyncEvent,
-    ManualTrackedAnime,
-    SeasonalAnime
 )
-from mal_data.services.anime_relations_sync import sync_anime_relations
-from mal_data.services.anime_list_sync import sync_all_anime_statuses, upsert_anime_entry
-from mal_data.services.anilist_airing_sync import sync_airing_data_for_dashboard
-from mal_data.services.anilist_client import AniListClient
-from mal_data.services.manual_tracked_sync import sync_manual_tracked_anime_entries, sync_manual_tracked_anime_entry
-from mal_data.services.mal_client import MyAnimeListClient
-from mal_data.services.seasonal_sync import sync_seasonal_anime, sync_tba_upcoming_anime
 
 def dashboard(request):
     now = timezone.now()
@@ -343,4 +328,3 @@ def dashboard(request):
     }
 
     return render(request, "mal_data/dashboard.html", context)
-

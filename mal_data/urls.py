@@ -1,17 +1,17 @@
 from django.urls import path
 
-from . import views
 from .web import library as library_views
 from .web import search as search_views
 from .web import seasonal as seasonal_views
 from .web import relations as relations_views
 from .web import sync as sync_views
+from .web import dashboard as dashboard_views
 
 app_name = "mal_insights"
 
 
 urlpatterns = [
-    path("", views.dashboard, name="dashboard"),
+    path("", dashboard_views.dashboard, name="dashboard"),
 
     path(
         "status/<str:status>/",
