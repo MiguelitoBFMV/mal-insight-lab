@@ -5,6 +5,7 @@ from .web import library as library_views
 from .web import search as search_views
 from .web import seasonal as seasonal_views
 from .web import relations as relations_views
+from .web import sync as sync_views
 
 app_name = "mal_insights"
 
@@ -24,7 +25,7 @@ urlpatterns = [
     ),
     path(
         "sync/",
-        views.sync_anime_list_view,
+        sync_views.sync_anime_list_view,
         name="sync_anime_list",
     ),
     path(
