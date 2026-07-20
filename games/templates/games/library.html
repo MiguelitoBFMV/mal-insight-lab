@@ -1,0 +1,296 @@
+{% extends "games/base.html" %}
+
+{% block title %}
+    Library
+{% endblock %}
+
+{% block module_name %}
+    Library · Game Kiroku
+{% endblock %}
+
+{% block content %}
+    <header class="library-page-header">
+        <div>
+            <p class="dashboard-eyebrow">
+                Local Game Archive
+            </p>
+
+            <h1>Library</h1>
+
+            <p>
+                Browse your games by status, platform,
+                ownership and playthrough history.
+            </p>
+        </div>
+
+        <span class="library-result-count">
+            {{ result_count }}
+            {% if result_count == 1 %}
+                game
+            {% else %}
+                games
+            {% endif %}
+        </span>
+    </header>
+
+    <section
+        class="library-filter-panel"
+        aria-labelledby="library-filter-title"
+    >
+        <header>
+            <p class="panel-kicker">Library controls</p>
+            <h2 id="library-filter-title">Search & Filter</h2>
+        </header>
+
+        <form method="get" class="library-filter-form">
+            <div class="filter-field filter-field--search">
+                <label for="library-search">Search</label>
+
+                <input
+                    id="library-search"
+                    type="search"
+                    name="q"
+                    value="{{ query }}"
+                    placeholder="Title or franchise..."
+                >
+            </div>
+
+            <div class="filter-field">
+                <label for="library-status">Status</label>
+
+                <select
+                    id="library-status"
+                    name="status"
+                >
+                    <option value="">All</option>
+
+                    <option
+                        value="completed_once"
+                        {% if selected_status == "completed_once" %}
+                            selected
+                        {% endif %}
+                    >
+                        Completed at Least Once
+                    </option>
+
+                    {% for value, label in status_choices %}
+                        <option
+                            value="{{ value }}"
+                            {% if selected_status == value %}
+                                selected
+                            {% endif %}
+                        >
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-field">
+                <label for="library-access">Access</label>
+
+                <select
+                    id="library-access"
+                    name="access"
+                >
+                    <option value="">All</option>
+
+                    {% for value, label in access_choices %}
+                        <option
+                            value="{{ value }}"
+                            {% if selected_access == value %}
+                                selected
+                            {% endif %}
+                        >
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-field">
+                <label for="library-platform">Platform</label>
+
+                <select
+                    id="library-platform"
+                    name="platform"
+                >
+                    <option value="">All</option>
+
+                    {% for value, label in platform_choices %}
+                        <option
+                            value="{{ value }}"
+                            {% if selected_platform == value %}
+                                selected
+                            {% endif %}
+                        >
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-actions">
+                <button type="submit">
+                    Apply Filters
+                </button>
+
+                <a href="{% url 'games:library' %}">
+                    Clear
+                </a>
+            </div>
+        </form>
+    </section>
+
+    <section
+        class="full-library-section"
+        aria-labelledby="full-library-title"
+    >
+        <header class="section-heading">
+            <div>
+                <p class="panel-kicker">Results</p>
+                <h2 id="full-library-title">
+                    Games Found
+                </h2>
+            </div>
+        </header>
+
+        <div class="full-library-grid">
+            {% for entry in entries %}
+                <article class="full-library-card">
+                    <div class="full-library-cover">
+                        {% if entry.game.cover_url %}
+                            <img
+                                src="{{ entry.game.cover_url }}"
+                                alt="{{ entry.game.title }} cover"
+                            >
+                        {% else %}
+                            <span>
+                                {{ entry.game.title|slice:":2"|upper }}
+                            </span>
+                        {% endif %}
+
+                        {% if entry.has_platinum %}
+                            <span class="platinum-badge">
+                                🏆
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <div class="full-library-copy">
+                        <header>
+                            <p>
+                                {% if entry.game.franchise %}
+                                    {{ entry.game.franchise.name }}
+                                {% else %}
+                                    No Franchise
+                                {% endif %}
+                            </p>
+
+                            <h3>{{ entry.game.title }}</h3>
+
+                            {% if entry.game.title_japanese %}
+                                <span class="japanese-title">
+                                    {{ entry.game.title_japanese }}
+                                </span>
+                            {% endif %}
+                        </header>
+
+                        <div class="library-status-row">
+                            {% if entry.status == "playing" and entry.has_completed_history %}
+                                <span class="status-badge status-badge--replaying">
+                                    Replaying
+                                </span>
+                            {% else %}
+                                <span class="status-badge status-badge--{{ entry.status }}">
+                                    {{ entry.get_status_display|default:"No Status" }}
+                                </span>
+                            {% endif %}
+
+                            {% if entry.has_completed_history %}
+                                <span class="completion-history">
+                                    Completed Before
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <dl class="library-card-data">
+                            <div>
+                                <dt>Playthroughs</dt>
+                                <dd>
+                                    {{ entry.library_playthroughs|length }}
+                                </dd>
+                            </div>
+
+                            <div>
+                                <dt>Main Story</dt>
+                                <dd>
+                                    {% if entry.effective_main_story_hours %}
+                                        {{ entry.effective_main_story_hours }} h
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </dd>
+                            </div>
+                        </dl>
+
+                        {% with latest=entry.library_playthroughs.0 %}
+                            {% if latest %}
+                                <div class="latest-playthrough">
+                                    <span>
+                                        Latest Playthrough
+                                    </span>
+
+                                    <strong>
+                                        #{{ latest.number }}
+                                        ·
+                                        {{ latest.get_text_language_display }}
+                                    </strong>
+
+                                    <small>
+                                        {{ latest.get_status_display }}
+
+                                        {% if latest.progress_note %}
+                                            · {{ latest.progress_note }}
+                                        {% endif %}
+                                    </small>
+                                </div>
+                            {% endif %}
+                        {% endwith %}
+
+                        <footer class="access-chip-list">
+                            {% for access in entry.library_accesses %}
+                                <span class="access-chip">
+                                    {{ access.get_access_type_display }}
+                                    ·
+                                    {{ access.get_platform_name_display }}
+
+                                    {% if access.store %}
+                                        · {{ access.get_store_display }}
+                                    {% endif %}
+                                </span>
+                            {% empty %}
+                                <span class="access-chip">
+                                    No Access
+                                </span>
+                            {% endfor %}
+                        </footer>
+                    </div>
+                </article>
+            {% empty %}
+                <div class="empty-library-result">
+                    <strong>No Games Found.</strong>
+
+                    <p>
+                        Try changing the filters or the search query.
+                    </p>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <footer class="game-footer">
+        <span>Game Kiroku · Library</span>
+        <span>{{ result_count }} results</span>
+    </footer>
+{% endblock %}

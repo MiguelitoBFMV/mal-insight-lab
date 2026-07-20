@@ -137,6 +137,7 @@ def dashboard(request):
             .order_by("-updated_at")[:6]
         ),
         "completable_owned_count": completable_owned_count,
+        "active_page": "dashboard",
     }
 
     return render(

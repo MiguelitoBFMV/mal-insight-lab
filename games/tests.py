@@ -223,3 +223,87 @@ class GameKirokuModelTests(TestCase):
             response.context["completion_ratio"],
             100,
         )
+
+class GameKirokuLibraryTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.yakuza = Game.objects.create(
+            title="Yakuza Kiwami 2",
+        )
+        cls.yakuza_entry = LibraryEntry.objects.create(
+            game=cls.yakuza,
+            status=LibraryEntry.Status.PLAYING,
+        )
+        GameAccess.objects.create(
+            library_entry=cls.yakuza_entry,
+            access_type=GameAccess.AccessType.OWNED,
+            platform_name=GameAccess.Platform.PC,
+            store=GameAccess.Store.STEAM,
+        )
+        Playthrough.objects.create(
+            library_entry=cls.yakuza_entry,
+            number=1,
+            status=Playthrough.Status.COMPLETED,
+            text_language=Playthrough.TextLanguage.ENGLISH,
+        )
+        Playthrough.objects.create(
+            library_entry=cls.yakuza_entry,
+            number=2,
+            status=Playthrough.Status.PLAYING,
+            text_language=Playthrough.TextLanguage.JAPANESE,
+        )
+
+        cls.rocket_league = Game.objects.create(
+            title="Rocket League",
+        )
+        cls.rocket_entry = LibraryEntry.objects.create(
+            game=cls.rocket_league,
+            status=LibraryEntry.Status.MULTIPLAYER,
+        )
+        GameAccess.objects.create(
+            library_entry=cls.rocket_entry,
+            access_type=GameAccess.AccessType.OWNED,
+            platform_name=GameAccess.Platform.PC,
+            store=GameAccess.Store.EPIC_GAMES,
+        )
+
+    def test_library_is_public(self):
+        response = self.client.get(
+            reverse("games:library")
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(
+            response,
+            "games/library.html",
+        )
+
+    def test_library_filters_by_search(self):
+        response = self.client.get(
+            reverse("games:library"),
+            {"q": "Yakuza"},
+        )
+
+        self.assertContains(
+            response,
+            "Yakuza Kiwami 2",
+        )
+        self.assertNotContains(
+            response,
+            "Rocket League",
+        )
+
+    def test_completed_once_includes_replaying_game(self):
+        response = self.client.get(
+            reverse("games:library"),
+            {"status": "completed_once"},
+        )
+
+        self.assertContains(
+            response,
+            "Yakuza Kiwami 2",
+        )
+        self.assertNotContains(
+            response,
+            "Rocket League",
+        )

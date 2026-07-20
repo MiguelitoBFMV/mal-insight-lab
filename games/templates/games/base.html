@@ -1,0 +1,163 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        {% block title %}
+            Game Kiroku
+        {% endblock %}
+        · MVS Tracker
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{% static 'games/dashboard.css' %}"
+    >
+</head>
+
+<body>
+    <div class="game-layout">
+        <aside class="game-sidebar">
+            <header class="sidebar-brand">
+                <a href="{% url 'games:dashboard' %}">
+                    <span class="brand-mark" aria-hidden="true">
+                        GK
+                    </span>
+
+                    <span>
+                        <strong>Game Kiroku</strong>
+                        <small>ゲーム記録</small>
+                    </span>
+                </a>
+            </header>
+
+            <nav
+                class="sidebar-nav"
+                aria-label="Game Kiroku navigation"
+            >
+                <a
+                    class="sidebar-link
+                    {% if active_page == 'dashboard' %}
+                        sidebar-link--active
+                    {% endif %}"
+                    href="{% url 'games:dashboard' %}"
+                >
+                    <span aria-hidden="true">⌂</span>
+                    Dashboard
+                </a>
+
+                <a
+                    class="sidebar-link
+                    {% if active_page == 'library' and not active_access and not active_status %}
+                        sidebar-link--active
+                    {% endif %}"
+                    href="{% url 'games:library' %}"
+                >
+                    <span aria-hidden="true">▦</span>
+                    Library
+                </a>
+
+                <a
+                    class="sidebar-link
+                    {% if active_access == 'owned' %}
+                        sidebar-link--active
+                    {% endif %}"
+                    href="{% url 'games:library' %}?access=owned"
+                >
+                    <span aria-hidden="true">◆</span>
+                    Owned
+                </a>
+
+                <a
+                    class="sidebar-link
+                    {% if active_access == 'wishlist' %}
+                        sidebar-link--active
+                    {% endif %}"
+                    href="{% url 'games:library' %}?access=wishlist"
+                >
+                    <span aria-hidden="true">♡</span>
+                    Wishlist
+                </a>
+
+                <span class="sidebar-link sidebar-link--disabled">
+                    <span aria-hidden="true">◈</span>
+                    Franchises
+                </span>
+
+                <a
+                    class="sidebar-link
+                    {% if active_status == 'multiplayer' %}
+                        sidebar-link--active
+                    {% endif %}"
+                    href="{% url 'games:library' %}?status=multiplayer"
+                >
+                    <span aria-hidden="true">●</span>
+                    Multiplayer
+                </a>
+            </nav>
+
+            <footer class="sidebar-footer">
+                <a href="{% url 'core:home' %}">
+                    ← MVS Tracker
+                </a>
+            </footer>
+        </aside>
+
+        <main class="game-main">
+            <nav
+                class="game-topbar"
+                aria-label="User access"
+            >
+                <div>
+                    <span class="topbar-module">
+                        {% block module_name %}
+                            Game Kiroku
+                        {% endblock %}
+                    </span>
+
+                    <span class="topbar-state">
+                        Local library
+                    </span>
+                </div>
+
+                <div class="topbar-access">
+                    {% if user.is_authenticated %}
+                        <span>
+                            Owner · {{ user.username }}
+                        </span>
+
+                        <form
+                            method="post"
+                            action="{% url 'logout' %}"
+                        >
+                            {% csrf_token %}
+
+                            <button type="submit">
+                                Log out
+                            </button>
+                        </form>
+                    {% else %}
+                        <span>Read-only mode</span>
+
+                        <a
+                            href="{% url 'login' %}?next={{ request.path|urlencode }}"
+                        >
+                            Sign in
+                        </a>
+                    {% endif %}
+                </div>
+            </nav>
+
+            {% block content %}
+            {% endblock %}
+        </main>
+    </div>
+</body>
+</html>
