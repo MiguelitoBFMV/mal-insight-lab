@@ -563,6 +563,144 @@
                             {{ playthrough.notes }}
                         </p>
                     {% endif %}
+
+                    {% if user.is_authenticated %}
+                        <details
+                            class="playthrough-editor"
+                            {% if playthrough.owner_form.errors %}
+                                open
+                            {% endif %}
+                        >
+                            <summary>
+                                Edit Playthrough Details
+                            </summary>
+
+                            <form
+                                method="post"
+                                action="{% url 'games:update_playthrough' game.slug playthrough.pk %}"
+                                class="playthrough-editor-form"
+                            >
+                                {% csrf_token %}
+
+                                {% if playthrough.owner_form.non_field_errors %}
+                                    <div class="detail-form-error detail-form-error--wide">
+                                        {% for error in playthrough.owner_form.non_field_errors %}
+                                            <p>{{ error }}</p>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+
+                                <div class="playthrough-editor-field">
+                                    <label for="{{ playthrough.owner_form.access.id_for_label }}">
+                                        {{ playthrough.owner_form.access.label }}
+                                    </label>
+
+                                    {{ playthrough.owner_form.access }}
+
+                                    {% for error in playthrough.owner_form.access.errors %}
+                                        <p class="detail-form-error">
+                                            {{ error }}
+                                        </p>
+                                    {% endfor %}
+                                </div>
+
+                                <div class="playthrough-editor-field">
+                                    <label for="{{ playthrough.owner_form.text_language.id_for_label }}">
+                                        {{ playthrough.owner_form.text_language.label }}
+                                    </label>
+
+                                    {{ playthrough.owner_form.text_language }}
+
+                                    {% for error in playthrough.owner_form.text_language.errors %}
+                                        <p class="detail-form-error">
+                                            {{ error }}
+                                        </p>
+                                    {% endfor %}
+                                </div>
+
+                                <div class="playthrough-editor-field">
+                                    <label for="{{ playthrough.owner_form.progress_note.id_for_label }}">
+                                        {{ playthrough.owner_form.progress_note.label }}
+                                    </label>
+
+                                    {{ playthrough.owner_form.progress_note }}
+
+                                    {% for error in playthrough.owner_form.progress_note.errors %}
+                                        <p class="detail-form-error">
+                                            {{ error }}
+                                        </p>
+                                    {% endfor %}
+                                </div>
+
+                                <div class="playthrough-editor-field">
+                                    <label for="{{ playthrough.owner_form.started_on.id_for_label }}">
+                                        {{ playthrough.owner_form.started_on.label }}
+                                    </label>
+
+                                    {{ playthrough.owner_form.started_on }}
+
+                                    {% for error in playthrough.owner_form.started_on.errors %}
+                                        <p class="detail-form-error">
+                                            {{ error }}
+                                        </p>
+                                    {% endfor %}
+                                </div>
+
+                                <div class="playthrough-editor-field">
+                                    <label for="{{ playthrough.owner_form.finished_on.id_for_label }}">
+                                        {{ playthrough.owner_form.finished_on.label }}
+                                    </label>
+
+                                    {{ playthrough.owner_form.finished_on }}
+
+                                    {% for error in playthrough.owner_form.finished_on.errors %}
+                                        <p class="detail-form-error">
+                                            {{ error }}
+                                        </p>
+                                    {% endfor %}
+                                </div>
+
+                                <div class="playthrough-editor-field">
+                                    <label for="{{ playthrough.owner_form.hours_played.id_for_label }}">
+                                        {{ playthrough.owner_form.hours_played.label }}
+                                    </label>
+
+                                    {{ playthrough.owner_form.hours_played }}
+
+                                    {% for error in playthrough.owner_form.hours_played.errors %}
+                                        <p class="detail-form-error">
+                                            {{ error }}
+                                        </p>
+                                    {% endfor %}
+                                </div>
+
+                                <div
+                                    class="
+                                        playthrough-editor-field
+                                        playthrough-editor-field--notes
+                                    "
+                                >
+                                    <label for="{{ playthrough.owner_form.notes.id_for_label }}">
+                                        {{ playthrough.owner_form.notes.label }}
+                                    </label>
+
+                                    {{ playthrough.owner_form.notes }}
+
+                                    {% for error in playthrough.owner_form.notes.errors %}
+                                        <p class="detail-form-error">
+                                            {{ error }}
+                                        </p>
+                                    {% endfor %}
+                                </div>
+
+                                <div class="playthrough-editor-actions">
+                                    <button type="submit">
+                                        Save Playthrough Details
+                                    </button>
+                                </div>
+                            </form>
+                        </details>
+                    {% endif %}
                 </article>
             {% empty %}
                 <p class="empty-state">

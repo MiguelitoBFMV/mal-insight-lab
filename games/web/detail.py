@@ -7,7 +7,10 @@ from django.shortcuts import (
 from django.views.decorators.http import require_POST
 from django.http import HttpResponseBadRequest
 
-from games.forms import LibraryEntryOwnerForm
+from games.forms import (
+    LibraryEntryOwnerForm,
+    PlaythroughOwnerForm,
+)
 from games.models import (
     GameAccess,
     LibraryEntry,
@@ -65,6 +68,7 @@ def _get_detail_entry(slug):
 def _build_detail_context(
     entry,
     owner_form=None,
+    playthrough_form=None,
 ):
     current_playthrough = next(
         (
@@ -115,6 +119,20 @@ def _build_detail_context(
             instance=entry,
         )
 
+    for playthrough in entry.detail_playthroughs:
+        if (
+            playthrough_form is not None
+            and playthrough.pk
+            == playthrough_form.instance.pk
+        ):
+            playthrough.owner_form = playthrough_form
+        else:
+            playthrough.owner_form = PlaythroughOwnerForm(
+                instance=playthrough,
+                library_entry=entry,
+                prefix=f"playthrough-{playthrough.pk}",
+            )
+
     return {
         "active_page": "library",
         "entry": entry,
@@ -159,6 +177,48 @@ def update_entry(request, slug):
         _build_detail_context(
             entry,
             owner_form=form,
+        ),
+    )
+
+
+@login_required
+@require_POST
+def update_playthrough(
+    request,
+    slug,
+    playthrough_id,
+):
+    entry = _get_detail_entry(slug)
+
+    playthrough = get_object_or_404(
+        Playthrough.objects.select_related(
+            "library_entry",
+            "access",
+        ),
+        pk=playthrough_id,
+        library_entry=entry,
+    )
+
+    form = PlaythroughOwnerForm(
+        request.POST,
+        instance=playthrough,
+        library_entry=entry,
+        prefix=f"playthrough-{playthrough.pk}",
+    )
+
+    if form.is_valid():
+        form.save()
+
+        return redirect(
+            entry.game.get_absolute_url()
+        )
+
+    return render(
+        request,
+        "games/detail.html",
+        _build_detail_context(
+            entry,
+            playthrough_form=form,
         ),
     )
 

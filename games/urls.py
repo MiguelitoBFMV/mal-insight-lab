@@ -36,4 +36,12 @@ urlpatterns = [
         detail_views.update_playthrough_state,
         name="update_playthrough_state",
     ),
+    path(
+        (
+            "library/<slug:slug>/"
+            "playthroughs/<int:playthrough_id>/update/"
+        ),
+        detail_views.update_playthrough,
+        name="update_playthrough",
+    ),
 ]
