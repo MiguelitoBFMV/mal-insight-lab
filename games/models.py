@@ -1,3 +1,482 @@
-from django.db import models
+from decimal import Decimal
 
-# Create your models here.
+from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
+from django.db import models
+from django.db.models import F, Q
+from django.utils.text import slugify
+
+
+def generate_unique_slug(instance, value):
+    """
+    Generates a stable unique slug for Franchise and Game.
+
+    Existing slugs are not regenerated when the visible name or title changes.
+    """
+    base_slug = slugify(value) or "item"
+    candidate = base_slug
+    model_class = type(instance)
+
+    queryset = model_class.objects.all()
+
+    if instance.pk:
+        queryset = queryset.exclude(pk=instance.pk)
+
+    suffix = 2
+
+    while queryset.filter(slug=candidate).exists():
+        candidate = f"{base_slug}-{suffix}"
+        suffix += 1
+
+    return candidate
+
+
+class Franchise(models.Model):
+    name = models.CharField(
+        max_length=150,
+        unique=True,
+    )
+    slug = models.SlugField(
+        max_length=170,
+        unique=True,
+        blank=True,
+    )
+    description = models.TextField(
+        blank=True,
+    )
+    display_order = models.PositiveIntegerField(
+        default=0,
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = [
+            "display_order",
+            "name",
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = generate_unique_slug(
+                self,
+                self.name,
+            )
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
+
+
+class Game(models.Model):
+    igdb_id = models.PositiveBigIntegerField(
+        unique=True,
+        null=True,
+        blank=True,
+    )
+    title = models.CharField(
+        max_length=255,
+    )
+    title_japanese = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+    slug = models.SlugField(
+        max_length=280,
+        unique=True,
+        blank=True,
+    )
+    summary = models.TextField(
+        blank=True,
+    )
+    cover_url = models.URLField(
+        max_length=500,
+        blank=True,
+    )
+    artwork_url = models.URLField(
+        max_length=500,
+        blank=True,
+    )
+    first_release_date = models.DateField(
+        null=True,
+        blank=True,
+    )
+    igdb_main_story_hours = models.DecimalField(
+        max_digits=7,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[
+            MinValueValidator(Decimal("0.01")),
+        ],
+    )
+    igdb_payload = models.JSONField(
+        default=dict,
+        blank=True,
+    )
+    franchise = models.ForeignKey(
+        Franchise,
+        related_name="games",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = [
+            "title",
+        ]
+        indexes = [
+            models.Index(
+                fields=["title"],
+                name="games_game_title_idx",
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(igdb_main_story_hours__isnull=True)
+                    | Q(igdb_main_story_hours__gt=0)
+                ),
+                name="games_game_main_hours_positive",
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = generate_unique_slug(
+                self,
+                self.title,
+            )
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.title
+
+
+class LibraryEntry(models.Model):
+    class Status(models.TextChoices):
+        PLAYING = "playing", "Jugando"
+        PAUSED = "paused", "Pausado"
+        DROPPED = "dropped", "Dropeado"
+        PLAN_TO_PLAY = "plan_to_play", "Plan to Play"
+        COMPLETED = "completed", "Completado"
+        MULTIPLAYER = "multiplayer", "Multiplayer"
+
+    game = models.OneToOneField(
+        Game,
+        related_name="library_entry",
+        on_delete=models.CASCADE,
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        blank=True,
+        default="",
+        db_index=True,
+    )
+    has_platinum = models.BooleanField(
+        default=False,
+    )
+    main_story_hours_override = models.DecimalField(
+        max_digits=7,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[
+            MinValueValidator(Decimal("0.01")),
+        ],
+    )
+    notes = models.TextField(
+        blank=True,
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = [
+            "-updated_at",
+            "game__title",
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(main_story_hours_override__isnull=True)
+                    | Q(main_story_hours_override__gt=0)
+                ),
+                name="games_library_override_positive",
+            ),
+        ]
+
+    @property
+    def effective_main_story_hours(self):
+        if self.main_story_hours_override is not None:
+            return self.main_story_hours_override
+
+        return self.game.igdb_main_story_hours
+
+    @property
+    def is_owned(self):
+        return self.accesses.filter(
+            access_type=GameAccess.AccessType.OWNED,
+        ).exists()
+
+    @property
+    def is_wishlisted(self):
+        return self.accesses.filter(
+            access_type=GameAccess.AccessType.WISHLIST,
+        ).exists()
+
+    def __str__(self):
+        return f"{self.game.title} · {self.get_status_display() or 'Sin estado'}"
+
+
+class GameAccess(models.Model):
+    class AccessType(models.TextChoices):
+        OWNED = "owned", "Propio"
+        WISHLIST = "wishlist", "Wishlist"
+
+    class PlatformFamily(models.TextChoices):
+        PLAYSTATION = "playstation", "PlayStation"
+        PC = "pc", "PC"
+        NINTENDO = "nintendo", "Nintendo"
+        XBOX = "xbox", "Xbox"
+        OTHER = "other", "Otra"
+
+    library_entry = models.ForeignKey(
+        LibraryEntry,
+        related_name="accesses",
+        on_delete=models.CASCADE,
+    )
+    access_type = models.CharField(
+        max_length=15,
+        choices=AccessType.choices,
+        db_index=True,
+    )
+    platform_family = models.CharField(
+        max_length=20,
+        choices=PlatformFamily.choices,
+        db_index=True,
+    )
+    platform_name = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+    )
+    store = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+    )
+    acquired_on = models.DateField(
+        null=True,
+        blank=True,
+    )
+    notes = models.TextField(
+        blank=True,
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = [
+            "platform_family",
+            "platform_name",
+            "store",
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "library_entry",
+                    "access_type",
+                    "platform_family",
+                    "platform_name",
+                    "store",
+                ],
+                name="games_access_unique_location",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+
+        if (
+            self.access_type == self.AccessType.WISHLIST
+            and self.acquired_on is not None
+        ):
+            raise ValidationError(
+                {
+                    "acquired_on": (
+                        "Un acceso de wishlist no puede tener "
+                        "fecha de adquisición."
+                    ),
+                }
+            )
+
+    def __str__(self):
+        platform = self.platform_name or self.get_platform_family_display()
+        store = f" · {self.store}" if self.store else ""
+
+        return (
+            f"{self.library_entry.game.title} · "
+            f"{self.get_access_type_display()} · "
+            f"{platform}{store}"
+        )
+
+
+class Playthrough(models.Model):
+    class Status(models.TextChoices):
+        PLAYING = "playing", "Jugando"
+        PAUSED = "paused", "Pausado"
+        COMPLETED = "completed", "Completado"
+        DROPPED = "dropped", "Dropeado"
+
+    class TextLanguage(models.TextChoices):
+        JAPANESE = "ja", "Japonés"
+        ENGLISH = "en", "Inglés"
+        SPANISH = "es", "Español"
+        OTHER = "other", "Otro"
+
+    library_entry = models.ForeignKey(
+        LibraryEntry,
+        related_name="playthroughs",
+        on_delete=models.CASCADE,
+    )
+    access = models.ForeignKey(
+        GameAccess,
+        related_name="playthroughs",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    number = models.PositiveIntegerField()
+    status = models.CharField(
+        max_length=15,
+        choices=Status.choices,
+        default=Status.PLAYING,
+        db_index=True,
+    )
+    text_language = models.CharField(
+        max_length=10,
+        choices=TextLanguage.choices,
+        db_index=True,
+    )
+    started_on = models.DateField(
+        null=True,
+        blank=True,
+    )
+    finished_on = models.DateField(
+        null=True,
+        blank=True,
+    )
+    progress_note = models.CharField(
+        max_length=150,
+        blank=True,
+    )
+    hours_played = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[
+            MinValueValidator(Decimal("0.01")),
+        ],
+    )
+    notes = models.TextField(
+        blank=True,
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = [
+            "library_entry",
+            "number",
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "library_entry",
+                    "number",
+                ],
+                name="games_playthrough_number_unique",
+            ),
+            models.CheckConstraint(
+                condition=Q(number__gte=1),
+                name="games_playthrough_number_positive",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(hours_played__isnull=True)
+                    | Q(hours_played__gt=0)
+                ),
+                name="games_playthrough_hours_positive",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(started_on__isnull=True)
+                    | Q(finished_on__isnull=True)
+                    | Q(finished_on__gte=F("started_on"))
+                ),
+                name="games_playthrough_dates_valid",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+
+        errors = {}
+
+        if (
+            self.started_on
+            and self.finished_on
+            and self.finished_on < self.started_on
+        ):
+            errors["finished_on"] = (
+                "La fecha de término no puede ser anterior "
+                "a la fecha de inicio."
+            )
+
+        if (
+            self.access_id
+            and self.library_entry_id
+            and self.access.library_entry_id != self.library_entry_id
+        ):
+            errors["access"] = (
+                "El acceso seleccionado debe pertenecer "
+                "a la misma entrada de biblioteca."
+            )
+
+        if errors:
+            raise ValidationError(errors)
+
+    def __str__(self):
+        return (
+            f"{self.library_entry.game.title} · "
+            f"Playthrough {self.number} · "
+            f"{self.get_text_language_display()}"
+        )
