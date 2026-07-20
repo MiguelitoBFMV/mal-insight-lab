@@ -125,7 +125,11 @@
 
                     <div class="game-card-grid">
                         {% for entry in active_entries %}
-                            <article class="game-card">
+                            <a
+                                class="game-card game-card--link"
+                                href="{{ entry.game.get_absolute_url }}"
+                                aria-label="Open {{ entry.game.title }}"
+                            >
                                 <div class="game-cover">
                                     {% if entry.game.cover_url %}
                                         <img
@@ -176,7 +180,7 @@
                                         {% endif %}
                                     {% endwith %}
                                 </div>
-                            </article>
+                            </a>
                         {% empty %}
                             <p class="empty-state">
                                 No games are currently marked as playing.
@@ -199,7 +203,11 @@
 
                     <div class="compact-game-list">
                         {% for entry in multiplayer_entries %}
-                            <article class="compact-game">
+                            <a
+                                class="compact-game compact-game--link"
+                                href="{{ entry.game.get_absolute_url }}"
+                                aria-label="Open {{ entry.game.title }}"
+                            >
                                 <div class="compact-cover">
                                     {% if entry.game.cover_url %}
                                         <img
@@ -226,7 +234,7 @@
                                         <p>No access registered</p>
                                     {% endfor %}
                                 </div>
-                            </article>
+                            </a>
                         {% empty %}
                             <p class="empty-state">
                                 No multiplayer games are registered.
@@ -289,7 +297,11 @@
 
                 <div class="library-grid">
                     {% for entry in library_preview %}
-                        <article class="library-card">
+                        <a
+                            class="library-card library-card--link"
+                            href="{{ entry.game.get_absolute_url }}"
+                            aria-label="Open {{ entry.game.title }}"
+                        >
                             <div class="library-cover">
                                 {% if entry.game.cover_url %}
                                     <img
@@ -340,7 +352,7 @@
                                     {% endfor %}
                                 </footer>
                             </div>
-                        </article>
+                        </a>
                     {% empty %}
                         <p class="empty-state">
                             The library is still empty.

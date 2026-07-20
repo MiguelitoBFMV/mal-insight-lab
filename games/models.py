@@ -5,6 +5,7 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import F, Q
 from django.utils.text import slugify
+from django.urls import reverse
 
 
 def generate_unique_slug(instance, value):
@@ -164,6 +165,14 @@ class Game(models.Model):
 
     def __str__(self):
         return self.title
+    
+    def get_absolute_url(self):
+        return reverse(
+            "games:detail",
+            kwargs={
+                "slug": self.slug,
+            },
+        )
 
 
 class LibraryEntry(models.Model):

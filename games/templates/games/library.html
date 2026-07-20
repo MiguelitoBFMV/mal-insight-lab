@@ -157,7 +157,11 @@
 
         <div class="full-library-grid">
             {% for entry in entries %}
-                <article class="full-library-card">
+                <a
+                    class="full-library-card full-library-card--link"
+                    href="{{ entry.game.get_absolute_url }}"
+                    aria-label="Open {{ entry.game.title }}"
+                >
                     <div class="full-library-cover">
                         {% if entry.game.cover_url %}
                             <img
@@ -276,7 +280,7 @@
                             {% endfor %}
                         </footer>
                     </div>
-                </article>
+                </a>
             {% empty %}
                 <div class="empty-library-result">
                     <strong>No Games Found.</strong>

@@ -307,3 +307,126 @@ class GameKirokuLibraryTests(TestCase):
             response,
             "Rocket League",
         )
+
+class GameKirokuDetailTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.game = Game.objects.create(
+            title="Yakuza Kiwami 2",
+        )
+        cls.entry = LibraryEntry.objects.create(
+            game=cls.game,
+            status=LibraryEntry.Status.PLAYING,
+        )
+
+        cls.access = GameAccess.objects.create(
+            library_entry=cls.entry,
+            access_type=GameAccess.AccessType.OWNED,
+            platform_name=GameAccess.Platform.PC,
+            store=GameAccess.Store.STEAM,
+        )
+
+        Playthrough.objects.create(
+            library_entry=cls.entry,
+            access=cls.access,
+            number=1,
+            status=Playthrough.Status.COMPLETED,
+            text_language=Playthrough.TextLanguage.ENGLISH,
+            progress_note="Main Story completed",
+        )
+
+        Playthrough.objects.create(
+            library_entry=cls.entry,
+            access=cls.access,
+            number=2,
+            status=Playthrough.Status.PLAYING,
+            text_language=Playthrough.TextLanguage.JAPANESE,
+            progress_note="In progress",
+        )
+
+    def test_game_detail_is_public(self):
+        response = self.client.get(
+            self.game.get_absolute_url()
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(
+            response,
+            "games/detail.html",
+        )
+        self.assertContains(
+            response,
+            "Yakuza Kiwami 2",
+        )
+
+    def test_game_detail_displays_replay_history(self):
+        response = self.client.get(
+            self.game.get_absolute_url()
+        )
+
+        self.assertContains(response, "Replaying")
+        self.assertContains(response, "Playthrough 2")
+        self.assertContains(response, "Japanese")
+        self.assertContains(response, "Playthrough 1")
+        self.assertContains(response, "English")
+
+    def test_unknown_game_slug_returns_404(self):
+        response = self.client.get(
+            reverse(
+                "games:detail",
+                kwargs={
+                    "slug": "unknown-game",
+                },
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_library_links_to_game_detail(self):
+        response = self.client.get(
+            reverse("games:library")
+        )
+
+        self.assertContains(
+            response,
+            self.game.get_absolute_url(),
+        )
+
+    def test_dashboard_links_to_game_detail(self):
+        response = self.client.get(
+            reverse("games:dashboard")
+        )
+
+        self.assertContains(
+            response,
+            self.game.get_absolute_url(),
+        )
+
+    def test_game_detail_displays_access_information(self):
+        response = self.client.get(
+            self.game.get_absolute_url()
+        )
+
+        self.assertContains(response, "Owned")
+        self.assertContains(response, "PC")
+        self.assertContains(response, "Steam")
+
+    def test_multiplayer_detail_does_not_expect_main_story_duration(self):
+        multiplayer_game = Game.objects.create(
+            title="Rocket League",
+        )
+        multiplayer_entry = LibraryEntry.objects.create(
+            game=multiplayer_game,
+            status=LibraryEntry.Status.MULTIPLAYER,
+        )
+
+        response = self.client.get(
+            multiplayer_game.get_absolute_url()
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Not Applicable")
+        self.assertContains(
+            response,
+            "Persistent multiplayer games do not require a traditional playthrough.",
+        )

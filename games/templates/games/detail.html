@@ -1,0 +1,455 @@
+{% extends "games/base.html" %}
+
+{% block title %}
+    {{ game.title }}
+{% endblock %}
+
+{% block module_name %}
+    Game Detail · Game Kiroku
+{% endblock %}
+
+{% block content %}
+    <header
+        class="game-detail-hero"
+        {% if game.artwork_url %}
+            style="--detail-artwork: url('{{ game.artwork_url }}');"
+        {% endif %}
+    >
+        <div class="game-detail-hero-content">
+            <div class="game-detail-cover">
+                {% if game.cover_url %}
+                    <img
+                        src="{{ game.cover_url }}"
+                        alt="{{ game.title }} cover"
+                    >
+                {% else %}
+                    <span>
+                        {{ game.title|slice:":2"|upper }}
+                    </span>
+                {% endif %}
+
+                {% if entry.has_platinum %}
+                    <span class="detail-platinum-badge">
+                        🏆 Platinum
+                    </span>
+                {% endif %}
+            </div>
+
+            <div class="game-detail-heading">
+                <p class="dashboard-eyebrow">
+                    Game Library Entry
+                </p>
+
+                <h1>{{ game.title }}</h1>
+
+                {% if game.title_japanese %}
+                    <p class="game-detail-japanese">
+                        {{ game.title_japanese }}
+                    </p>
+                {% endif %}
+
+                <div class="game-detail-status-row">
+                    {% if entry.status == "playing" and entry.has_completed_history %}
+                        <span class="status-badge status-badge--replaying">
+                            Replaying
+                        </span>
+                    {% else %}
+                        <span class="status-badge status-badge--{{ entry.status }}">
+                            {{ entry.get_status_display|default:"No Status" }}
+                        </span>
+                    {% endif %}
+
+                    {% if entry.has_completed_history %}
+                        <span class="completion-history">
+                            Completed Before
+                        </span>
+                    {% endif %}
+                </div>
+
+                {% if game.summary %}
+                    <p class="game-detail-summary">
+                        {{ game.summary }}
+                    </p>
+                {% else %}
+                    <p class="game-detail-summary game-detail-summary--empty">
+                        Game metadata has not been enriched from IGDB yet.
+                    </p>
+                {% endif %}
+
+                <div class="game-detail-actions">
+                    <a
+                        class="detail-secondary-action"
+                        href="{% url 'games:library' %}"
+                    >
+                        ← Back to Library
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section
+        class="game-detail-overview"
+        aria-label="Game overview"
+    >
+        <article class="detail-overview-card">
+            <span>Current State</span>
+
+            <strong>
+                {% if entry.status == "playing" and entry.has_completed_history %}
+                    Replaying
+                {% else %}
+                    {{ entry.get_status_display|default:"No Status" }}
+                {% endif %}
+            </strong>
+        </article>
+
+        <article class="detail-overview-card">
+            <span>Franchise</span>
+
+            <strong>
+                {% if game.franchise %}
+                    {{ game.franchise.name }}
+                {% else %}
+                    No Franchise
+                {% endif %}
+            </strong>
+        </article>
+
+        <article class="detail-overview-card">
+            <span>Main Story</span>
+
+            <strong>
+                {% if entry.status == "multiplayer" %}
+                    Not Applicable
+                {% elif entry.effective_main_story_hours %}
+                    {{ entry.effective_main_story_hours }} h
+                {% else %}
+                    Pending
+                {% endif %}
+            </strong>
+
+            {% if entry.status != "multiplayer" %}
+                {% if entry.main_story_hours_override %}
+                    <small>Manual override</small>
+                {% elif game.igdb_main_story_hours %}
+                    <small>IGDB estimate</small>
+                {% endif %}
+            {% endif %}
+        </article>
+
+        <article class="detail-overview-card">
+            <span>First Release</span>
+
+            <strong>
+                {% if game.first_release_date %}
+                    {{ game.first_release_date|date:"M d, Y" }}
+                {% else %}
+                    Pending
+                {% endif %}
+            </strong>
+        </article>
+
+        <article class="detail-overview-card">
+            <span>Playthroughs</span>
+            <strong>{{ entry.detail_playthroughs|length }}</strong>
+        </article>
+
+        <article class="detail-overview-card">
+            <span>Platinum</span>
+
+            <strong>
+                {% if entry.has_platinum %}
+                    Unlocked
+                {% else %}
+                    Not Marked
+                {% endif %}
+            </strong>
+        </article>
+    </section>
+
+    <div class="game-detail-grid">
+        <section class="dashboard-panel detail-access-panel">
+            <header class="panel-header">
+                <div>
+                    <p class="panel-kicker">
+                        Library Access
+                    </p>
+
+                    <h2>Platforms & Stores</h2>
+                </div>
+
+                <span class="panel-count">
+                    {{ entry.detail_accesses|length }}
+                </span>
+            </header>
+
+            <div class="detail-access-groups">
+                <section class="detail-access-group">
+                    <h3>Owned</h3>
+
+                    <div class="detail-access-list">
+                        {% for access in owned_accesses %}
+                            <article class="detail-access-item">
+                                <div>
+                                    <strong>
+                                        {{ access.get_platform_name_display }}
+                                    </strong>
+
+                                    {% if access.store %}
+                                        <span>
+                                            {{ access.get_store_display }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+
+                                <span class="access-chip">
+                                    {{ access.get_access_type_display }}
+                                </span>
+
+                                {% if access.notes %}
+                                    <p>{{ access.notes }}</p>
+                                {% endif %}
+                            </article>
+                        {% empty %}
+                            <p class="empty-state">
+                                No owned access has been registered.
+                            </p>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <section class="detail-access-group">
+                    <h3>Wishlist</h3>
+
+                    <div class="detail-access-list">
+                        {% for access in wishlist_accesses %}
+                            <article class="detail-access-item">
+                                <div>
+                                    <strong>
+                                        {{ access.get_platform_name_display }}
+                                    </strong>
+
+                                    {% if access.store %}
+                                        <span>
+                                            {{ access.get_store_display }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+
+                                <span class="access-chip">
+                                    {{ access.get_access_type_display }}
+                                </span>
+
+                                {% if access.notes %}
+                                    <p>{{ access.notes }}</p>
+                                {% endif %}
+                            </article>
+                        {% empty %}
+                            <p class="empty-state">
+                                This game is not wishlisted on another platform.
+                            </p>
+                        {% endfor %}
+                    </div>
+                </section>
+            </div>
+        </section>
+
+        <section class="dashboard-panel detail-current-panel">
+            <header class="panel-header">
+                <div>
+                    <p class="panel-kicker">
+                        Active Run
+                    </p>
+
+                    <h2>Current Playthrough</h2>
+                </div>
+            </header>
+
+            {% if active_playthrough %}
+                <article class="current-playthrough-card">
+                    <span class="playthrough-number">
+                        {{ active_playthrough.number|stringformat:"02d" }}
+                    </span>
+
+                    <div>
+                        <h3>
+                            Playthrough {{ active_playthrough.number }}
+                        </h3>
+
+                        <p>
+                            {{ active_playthrough.get_text_language_display }}
+                            ·
+                            {{ active_playthrough.get_status_display }}
+                        </p>
+
+                        {% if active_playthrough.access %}
+                            <p>
+                                {{ active_playthrough.access.get_platform_name_display }}
+
+                                {% if active_playthrough.access.store %}
+                                    ·
+                                    {{ active_playthrough.access.get_store_display }}
+                                {% endif %}
+                            </p>
+                        {% endif %}
+
+                        {% if active_playthrough.progress_note %}
+                            <strong class="current-progress-note">
+                                {{ active_playthrough.progress_note }}
+                            </strong>
+                        {% endif %}
+                    </div>
+                </article>
+            {% elif entry.status == "multiplayer" %}
+                <p class="empty-state">
+                    Persistent multiplayer games do not require a traditional
+                    playthrough.
+                </p>
+            {% else %}
+                <p class="empty-state">
+                    There is no active playthrough.
+                </p>
+            {% endif %}
+        </section>
+    </div>
+
+    <section class="dashboard-panel detail-playthrough-panel">
+        <header class="panel-header">
+            <div>
+                <p class="panel-kicker">
+                    Full History
+                </p>
+
+                <h2>Playthroughs</h2>
+            </div>
+
+            <span class="panel-count">
+                {{ entry.detail_playthroughs|length }}
+            </span>
+        </header>
+
+        <div class="detail-playthrough-list">
+            {% for playthrough in entry.detail_playthroughs %}
+                <article class="detail-playthrough-card">
+                    <header class="detail-playthrough-header">
+                        <span class="playthrough-number">
+                            {{ playthrough.number|stringformat:"02d" }}
+                        </span>
+
+                        <div>
+                            <h3>
+                                Playthrough {{ playthrough.number }}
+                            </h3>
+
+                            <p>
+                                {{ playthrough.get_text_language_display }}
+                                ·
+                                {{ playthrough.get_status_display }}
+                            </p>
+                        </div>
+
+                        {% if playthrough.progress_note %}
+                            <span class="playthrough-progress">
+                                {{ playthrough.progress_note }}
+                            </span>
+                        {% endif %}
+                    </header>
+
+                    <dl class="detail-playthrough-data">
+                        <div>
+                            <dt>Platform</dt>
+
+                            <dd>
+                                {% if playthrough.access %}
+                                    {{ playthrough.access.get_platform_name_display }}
+
+                                    {% if playthrough.access.store %}
+                                        ·
+                                        {{ playthrough.access.get_store_display }}
+                                    {% endif %}
+                                {% else %}
+                                    Not Registered
+                                {% endif %}
+                            </dd>
+                        </div>
+
+                        <div>
+                            <dt>Started</dt>
+
+                            <dd>
+                                {% if playthrough.started_on %}
+                                    {{ playthrough.started_on|date:"M d, Y" }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </dd>
+                        </div>
+
+                        <div>
+                            <dt>Finished</dt>
+
+                            <dd>
+                                {% if playthrough.finished_on %}
+                                    {{ playthrough.finished_on|date:"M d, Y" }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </dd>
+                        </div>
+
+                        <div>
+                            <dt>Hours Played</dt>
+
+                            <dd>
+                                {% if playthrough.hours_played %}
+                                    {{ playthrough.hours_played }} h
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </dd>
+                        </div>
+                    </dl>
+
+                    {% if playthrough.notes %}
+                        <p class="detail-playthrough-notes">
+                            {{ playthrough.notes }}
+                        </p>
+                    {% endif %}
+                </article>
+            {% empty %}
+                <p class="empty-state">
+                    No playthroughs have been registered.
+                </p>
+            {% endfor %}
+        </div>
+    </section>
+
+    {% if entry.notes %}
+        <section class="dashboard-panel detail-notes-panel">
+            <header class="panel-header">
+                <div>
+                    <p class="panel-kicker">
+                        Personal Context
+                    </p>
+
+                    <h2>Library Notes</h2>
+                </div>
+            </header>
+
+            <p>{{ entry.notes }}</p>
+        </section>
+    {% endif %}
+
+    <footer class="game-footer">
+        <span>{{ game.title }} · Game Kiroku</span>
+
+        <span>
+            {% if game.igdb_id %}
+                IGDB {{ game.igdb_id }}
+            {% else %}
+                Manual local entry
+            {% endif %}
+        </span>
+    </footer>
+{% endblock %}
