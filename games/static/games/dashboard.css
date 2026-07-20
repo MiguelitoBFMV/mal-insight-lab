@@ -1783,3 +1783,67 @@ button {
         grid-column: auto;
     }
 }
+
+.access-creator {
+    margin-bottom: 18px;
+    border-bottom: 1px solid var(--border);
+}
+
+.access-creator summary {
+    padding: 2px 0 14px;
+    color: #fca5a5;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.access-creator summary:hover {
+    color: #fecaca;
+}
+
+.access-creator-form {
+    display: grid;
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: rgba(5, 8, 15, 0.6);
+}
+
+.access-creator-field--notes {
+    grid-column: 1 / -1;
+}
+
+.access-creator-form
+.playthrough-editor-actions {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 900px) {
+    .access-creator-form {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+    .access-creator-field--notes {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 620px) {
+    .access-creator-form {
+        grid-template-columns: 1fr;
+    }
+
+    .access-creator-field--notes,
+    .access-creator-form
+    .playthrough-editor-actions {
+        grid-column: auto;
+    }
+}
+

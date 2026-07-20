@@ -330,4 +330,91 @@ class NewPlaythroughForm(forms.ModelForm):
             )
 
         return cleaned_data
+
+    
+class GameAccessOwnerForm(forms.ModelForm):
+    class Meta:
+        model = GameAccess
+        fields = (
+            "access_type",
+            "platform_name",
+            "store",
+            "notes",
+        )
+        labels = {
+            "access_type": "Access Type",
+            "platform_name": "Platform",
+            "store": "Store",
+            "notes": "Access Notes",
+        }
+        widgets = {
+            "access_type": forms.Select(
+                attrs={
+                    "class": "detail-owner-control",
+                }
+            ),
+            "platform_name": forms.Select(
+                attrs={
+                    "class": "detail-owner-control",
+                }
+            ),
+            "store": forms.Select(
+                attrs={
+                    "class": "detail-owner-control",
+                }
+            ),
+            "notes": forms.Textarea(
+                attrs={
+                    "class": (
+                        "detail-owner-control "
+                        "detail-owner-textarea"
+                    ),
+                    "rows": 3,
+                    "placeholder": (
+                        "Optional context about this access..."
+                    ),
+                }
+            ),
+        }
+
+    def __init__(
+        self,
+        *args,
+        library_entry,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+
+        self.library_entry = library_entry
+        self.instance.library_entry = library_entry
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        access_type = cleaned_data.get("access_type")
+        platform_name = cleaned_data.get("platform_name")
+        store = cleaned_data.get("store", "")
+
+        if access_type and platform_name:
+            duplicate_access = GameAccess.objects.filter(
+                library_entry=self.library_entry,
+                access_type=access_type,
+                platform_name=platform_name,
+                store=store,
+            )
+
+            if self.instance.pk:
+                duplicate_access = duplicate_access.exclude(
+                    pk=self.instance.pk
+                )
+
+            if duplicate_access.exists():
+                raise forms.ValidationError(
+                    (
+                        "This platform and store access "
+                        "is already registered."
+                    )
+                )
+
+        return cleaned_data
     

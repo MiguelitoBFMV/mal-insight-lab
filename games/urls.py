@@ -52,4 +52,12 @@ urlpatterns = [
         detail_views.create_playthrough,
         name="create_playthrough",
     ),
+    path(
+        (
+            "library/<slug:slug>/"
+            "accesses/create/"
+        ),
+        detail_views.create_access,
+        name="create_access",
+    ),
 ]

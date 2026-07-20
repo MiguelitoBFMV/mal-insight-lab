@@ -282,6 +282,102 @@
                 </span>
             </header>
 
+            {% if user.is_authenticated %}
+                <details
+                    class="access-creator"
+                    {% if new_access_form.errors %}
+                        open
+                    {% endif %}
+                >
+                    <summary>
+                        Add Platform or Store Access
+                    </summary>
+
+                    <form
+                        method="post"
+                        action="{% url 'games:create_access' game.slug %}"
+                        class="access-creator-form"
+                    >
+                        {% csrf_token %}
+
+                        {% if new_access_form.non_field_errors %}
+                            <div class="detail-form-error detail-form-error--wide">
+                                {% for error in new_access_form.non_field_errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <div class="playthrough-editor-field">
+                            <label for="{{ new_access_form.access_type.id_for_label }}">
+                                {{ new_access_form.access_type.label }}
+                            </label>
+
+                            {{ new_access_form.access_type }}
+
+                            {% for error in new_access_form.access_type.errors %}
+                                <p class="detail-form-error">
+                                    {{ error }}
+                                </p>
+                            {% endfor %}
+                        </div>
+
+                        <div class="playthrough-editor-field">
+                            <label for="{{ new_access_form.platform_name.id_for_label }}">
+                                {{ new_access_form.platform_name.label }}
+                            </label>
+
+                            {{ new_access_form.platform_name }}
+
+                            {% for error in new_access_form.platform_name.errors %}
+                                <p class="detail-form-error">
+                                    {{ error }}
+                                </p>
+                            {% endfor %}
+                        </div>
+
+                        <div class="playthrough-editor-field">
+                            <label for="{{ new_access_form.store.id_for_label }}">
+                                {{ new_access_form.store.label }}
+                            </label>
+
+                            {{ new_access_form.store }}
+
+                            {% for error in new_access_form.store.errors %}
+                                <p class="detail-form-error">
+                                    {{ error }}
+                                </p>
+                            {% endfor %}
+                        </div>
+
+                        <div
+                            class="
+                                playthrough-editor-field
+                                access-creator-field--notes
+                            "
+                        >
+                            <label for="{{ new_access_form.notes.id_for_label }}">
+                                {{ new_access_form.notes.label }}
+                            </label>
+
+                            {{ new_access_form.notes }}
+
+                            {% for error in new_access_form.notes.errors %}
+                                <p class="detail-form-error">
+                                    {{ error }}
+                                </p>
+                            {% endfor %}
+                        </div>
+
+                        <div class="playthrough-editor-actions">
+                            <button type="submit">
+                                Add Library Access
+                            </button>
+                        </div>
+                    </form>
+                </details>
+            {% endif %}
+
             <div class="detail-access-groups">
                 <section class="detail-access-group">
                     <h3>Owned</h3>

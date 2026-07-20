@@ -1318,6 +1318,7 @@ class GameKirokuPlaythroughEditorTests(TestCase):
             Playthrough.Status.PLAYING,
         )
 
+
 class GameKirokuNewPlaythroughTests(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -1788,5 +1789,294 @@ class GameKirokuNewPlaythroughTests(TestCase):
         )
         self.assertEqual(
             multiplayer_entry.playthroughs.count(),
+            0,
+        )
+
+
+class GameKirokuAccessCreationTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.owner = get_user_model().objects.create_user(
+            username="access-owner",
+            password="test-password",
+        )
+
+        cls.game = Game.objects.create(
+            title="Access Creation Game",
+        )
+
+        cls.entry = LibraryEntry.objects.create(
+            game=cls.game,
+            status=LibraryEntry.Status.PLAN_TO_PLAY,
+        )
+
+    def create_url(self):
+        return reverse(
+            "games:create_access",
+            kwargs={
+                "slug": self.game.slug,
+            },
+        )
+
+    def form_data(self, **overrides):
+        data = {
+            "new-access-access_type": (
+                GameAccess.AccessType.OWNED
+            ),
+            "new-access-platform_name": (
+                GameAccess.Platform.PLAYSTATION_5
+            ),
+            "new-access-store": (
+                GameAccess.Store.PLAYSTATION_STORE
+            ),
+            "new-access-notes": (
+                "Primary console copy."
+            ),
+        }
+
+        data.update(overrides)
+
+        return data
+
+    def test_access_creator_is_hidden_from_anonymous_users(
+        self,
+    ):
+        response = self.client.get(
+            self.game.get_absolute_url()
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(
+            response,
+            'id="id_new-access-access_type"',
+        )
+        self.assertNotContains(
+            response,
+            "Add Library Access",
+        )
+
+    def test_access_creator_is_visible_to_owner(
+        self,
+    ):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(
+            self.game.get_absolute_url()
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            'id="id_new-access-access_type"',
+        )
+        self.assertContains(
+            response,
+            "Add Platform or Store Access",
+        )
+        self.assertContains(
+            response,
+            "Add Library Access",
+        )
+
+    def test_anonymous_creation_redirects_to_login(
+        self,
+    ):
+        response = self.client.post(
+            self.create_url(),
+            self.form_data(),
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(
+            reverse("login"),
+            response.url,
+        )
+        self.assertEqual(
+            self.entry.accesses.count(),
+            0,
+        )
+
+    def test_authenticated_get_to_creation_route_returns_405(
+        self,
+    ):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(
+            self.create_url()
+        )
+
+        self.assertEqual(response.status_code, 405)
+
+    def test_owner_can_create_owned_access(
+        self,
+    ):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            self.create_url(),
+            self.form_data(),
+        )
+
+        self.assertRedirects(
+            response,
+            self.game.get_absolute_url(),
+        )
+
+        access = self.entry.accesses.get()
+
+        self.assertEqual(
+            access.access_type,
+            GameAccess.AccessType.OWNED,
+        )
+        self.assertEqual(
+            access.platform_name,
+            GameAccess.Platform.PLAYSTATION_5,
+        )
+        self.assertEqual(
+            access.store,
+            GameAccess.Store.PLAYSTATION_STORE,
+        )
+        self.assertEqual(
+            access.notes,
+            "Primary console copy.",
+        )
+
+    def test_owner_can_create_wishlist_access(
+        self,
+    ):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            self.create_url(),
+            self.form_data(
+                **{
+                    "new-access-access_type":
+                        GameAccess.AccessType.WISHLIST,
+                    "new-access-platform_name":
+                        GameAccess.Platform.PC,
+                    "new-access-store":
+                        GameAccess.Store.STEAM,
+                    "new-access-notes":
+                        "Wait for a discount.",
+                }
+            ),
+        )
+
+        self.assertRedirects(
+            response,
+            self.game.get_absolute_url(),
+        )
+
+        access = self.entry.accesses.get()
+
+        self.assertEqual(
+            access.access_type,
+            GameAccess.AccessType.WISHLIST,
+        )
+        self.assertEqual(
+            access.platform_name,
+            GameAccess.Platform.PC,
+        )
+        self.assertEqual(
+            access.store,
+            GameAccess.Store.STEAM,
+        )
+
+    def test_owned_and_wishlist_access_can_share_location(
+        self,
+    ):
+        GameAccess.objects.create(
+            library_entry=self.entry,
+            access_type=GameAccess.AccessType.OWNED,
+            platform_name=GameAccess.Platform.PC,
+            store=GameAccess.Store.STEAM,
+        )
+
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            self.create_url(),
+            self.form_data(
+                **{
+                    "new-access-access_type":
+                        GameAccess.AccessType.WISHLIST,
+                    "new-access-platform_name":
+                        GameAccess.Platform.PC,
+                    "new-access-store":
+                        GameAccess.Store.STEAM,
+                }
+            ),
+        )
+
+        self.assertRedirects(
+            response,
+            self.game.get_absolute_url(),
+        )
+        self.assertEqual(
+            self.entry.accesses.count(),
+            2,
+        )
+
+    def test_exact_duplicate_access_is_rejected(
+        self,
+    ):
+        GameAccess.objects.create(
+            library_entry=self.entry,
+            access_type=GameAccess.AccessType.OWNED,
+            platform_name=GameAccess.Platform.PLAYSTATION_5,
+            store=GameAccess.Store.PLAYSTATION_STORE,
+        )
+
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            self.create_url(),
+            self.form_data(),
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        form = response.context["new_access_form"]
+
+        self.assertTrue(
+            form.non_field_errors()
+        )
+        self.assertEqual(
+            self.entry.accesses.count(),
+            1,
+        )
+
+    def test_invalid_platform_choice_is_rejected(
+        self,
+    ):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            self.create_url(),
+            self.form_data(
+                **{
+                    "new-access-platform_name":
+                        "imaginary_console",
+                }
+            ),
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        form = response.context["new_access_form"]
+
+        platform_errors = (
+            form.errors
+            .as_data()
+            .get("platform_name", [])
+        )
+
+        self.assertTrue(platform_errors)
+        self.assertEqual(
+            platform_errors[0].code,
+            "invalid_choice",
+        )
+        self.assertEqual(
+            self.entry.accesses.count(),
             0,
         )

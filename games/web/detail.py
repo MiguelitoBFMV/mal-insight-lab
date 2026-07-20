@@ -8,6 +8,7 @@ from django.views.decorators.http import require_POST
 from django.http import HttpResponseBadRequest
 
 from games.forms import (
+    GameAccessOwnerForm,
     LibraryEntryOwnerForm,
     NewPlaythroughForm,
     PlaythroughOwnerForm,
@@ -74,6 +75,7 @@ def _build_detail_context(
     owner_form=None,
     playthrough_form=None,
     new_playthrough_form=None,
+    new_access_form=None,
 ):
     current_playthrough = next(
         (
@@ -144,6 +146,12 @@ def _build_detail_context(
             prefix="new-playthrough",
         )
 
+    if new_access_form is None:
+        new_access_form = GameAccessOwnerForm(
+            library_entry=entry,
+            prefix="new-access",
+        )
+
     return {
         "active_page": "library",
         "entry": entry,
@@ -153,6 +161,7 @@ def _build_detail_context(
         "wishlist_accesses": wishlist_accesses,
         "owner_form": owner_form,
         "new_playthrough_form": new_playthrough_form,
+        "new_access_form": new_access_form,
     }
 
 
@@ -320,6 +329,39 @@ def create_playthrough(
         _build_detail_context(
             entry,
             new_playthrough_form=form,
+        ),
+    )
+
+
+@login_required
+@require_POST
+def create_access(
+    request,
+    slug,
+):
+    entry = _get_detail_entry(slug)
+
+    form = GameAccessOwnerForm(
+        request.POST,
+        library_entry=entry,
+        prefix="new-access",
+    )
+
+    if form.is_valid():
+        access = form.save(commit=False)
+        access.library_entry = entry
+        access.save()
+
+        return redirect(
+            entry.game.get_absolute_url()
+        )
+
+    return render(
+        request,
+        "games/detail.html",
+        _build_detail_context(
+            entry,
+            new_access_form=form,
         ),
     )
 
