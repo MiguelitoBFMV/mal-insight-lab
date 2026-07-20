@@ -137,29 +137,20 @@
                 </article>
             </a>
 
-            <article
-                class="
-                    module-card
-                    module-card--games
-                    module-card--disabled
-                "
+            <a
+                class="module-card module-card--games"
+                href="{% url 'games:dashboard' %}"
             >
-                <div class="module-card-content">
+                <article class="module-card-content">
                     <header class="module-card-top">
                         <span
                             class="module-icon"
                             aria-hidden="true"
                         >
-                            🎮
                         </span>
 
-                        <span
-                            class="
-                                module-status
-                                module-status--soon
-                            "
-                        >
-                            Próximamente
+                        <span class="module-status">
+                            Disponible
                         </span>
                     </header>
 
@@ -180,15 +171,15 @@
 
                     <footer class="module-footer">
                         <span class="module-footer-text">
-                            Metadatos importados desde IGDB
+                            Biblioteca local de videojuegos
                         </span>
 
                         <span class="module-action">
-                            En construcción
+                            Entrar →
                         </span>
                     </footer>
-                </div>
-            </article>
+                </article>
+            </a>
 
             <article
                 class="
