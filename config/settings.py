@@ -40,6 +40,7 @@ INSTALLED_APPS = [
 
     "core.apps.CoreConfig",
     "mal_data.apps.MalDataConfig",
+    "games.apps.GamesConfig",
 ]
 
 MIDDLEWARE = [

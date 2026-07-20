@@ -1,0 +1,139 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Game Kiroku · MVS Tracker</title>
+
+    <link
+        rel="stylesheet"
+        href="{% static 'games/dashboard.css' %}"
+    >
+</head>
+
+<body>
+    <main class="game-platform">
+        <nav
+            class="module-nav"
+            aria-label="Navegación del módulo"
+        >
+            <a
+                class="module-nav__back"
+                href="{% url 'core:home' %}"
+            >
+                ← MVS Tracker
+            </a>
+
+            <div class="module-nav__access">
+                {% if user.is_authenticated %}
+                    <span>
+                        Owner · {{ user.username }}
+                    </span>
+
+                    <form
+                        method="post"
+                        action="{% url 'logout' %}"
+                    >
+                        {% csrf_token %}
+
+                        <button type="submit">
+                            Cerrar sesión
+                        </button>
+                    </form>
+                {% else %}
+                    <span>Modo lectura</span>
+
+                    <a
+                        href="{% url 'login' %}?next={{ request.path|urlencode }}"
+                    >
+                        Iniciar sesión
+                    </a>
+                {% endif %}
+            </div>
+        </nav>
+
+        <header class="game-hero">
+            <div class="game-hero__copy">
+                <p class="game-eyebrow">
+                    ゲーム記録 · Video Game Module
+                </p>
+
+                <h1>Game Kiroku</h1>
+
+                <p class="game-hero__description">
+                    Biblioteca, wishlist, playthroughs y análisis para
+                    organizar lo que juego sin convertir el backlog en
+                    una segunda pega.
+                </p>
+            </div>
+
+            <aside class="foundation-status">
+                <span>Module Status</span>
+                <strong>Foundation Active</strong>
+            </aside>
+        </header>
+
+        <section
+            class="feature-grid"
+            aria-labelledby="feature-title"
+        >
+            <header class="section-header">
+                <p class="section-kicker">MVP Systems</p>
+                <h2 id="feature-title">Construyendo la biblioteca</h2>
+            </header>
+
+            <div class="feature-grid__content">
+                <article class="feature-card">
+                    <span class="feature-card__index">01</span>
+
+                    <h3>Biblioteca</h3>
+
+                    <p>
+                        Juegos propios, wishlist, plataformas, tiendas,
+                        estados personales y agrupación por franquicias.
+                    </p>
+
+                    <footer>Próximamente</footer>
+                </article>
+
+                <article class="feature-card">
+                    <span class="feature-card__index">02</span>
+
+                    <h3>Playthroughs</h3>
+
+                    <p>
+                        Historial de partidas, idioma de texto, progreso
+                        manual, duración y contexto de cada recorrido.
+                    </p>
+
+                    <footer>Próximamente</footer>
+                </article>
+
+                <article class="feature-card">
+                    <span class="feature-card__index">03</span>
+
+                    <h3>Análisis</h3>
+
+                    <p>
+                        Completados, backlog, wishlist, idiomas,
+                        franquicias y candidatos para platinar.
+                    </p>
+
+                    <footer>Próximamente</footer>
+                </article>
+            </div>
+        </section>
+
+        <footer class="game-footer">
+            <span>Game Kiroku · MVS Tracker</span>
+            <span>Local-first game library</span>
+        </footer>
+    </main>
+</body>
+</html>

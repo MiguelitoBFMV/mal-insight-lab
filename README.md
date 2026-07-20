@@ -52,9 +52,11 @@ MAL Insights is available at:
 
 ### Game Kiroku / ゲーム記録
 
-Status: **Planned**
+Status: **Foundation active**
 
-Game Kiroku will manage the personal video game library and backlog.
+Game Kiroku is now available as the video game module of MVS Tracker. Its initial navigation, shared authentication, public read-only access, and module dashboard are active.
+
+The next development stage will define the local game library, playthrough models, and IGDB import workflow.
 
 Planned MVP features include:
 
@@ -69,7 +71,7 @@ Planned MVP features include:
 - Platinum indicator.
 - Library and completion analytics.
 
-The planned route is:
+Game Kiroku is available at:
 
 ```text
 /games/
@@ -163,6 +165,20 @@ mvs-tracker/
 │   ├── apps.py
 │   ├── urls.py
 │   └── views.py
+│
+├── games/
+│   ├── migrations/
+│   ├── services/
+│   ├── static/games/
+│   ├── templates/games/
+│   ├── web/
+│   │   ├── __init__.py
+│   │   └── dashboard.py
+│   ├── admin.py
+│   ├── apps.py
+│   ├── models.py
+│   ├── tests.py
+│   └── urls.py
 │
 ├── mal_data/
 │   ├── management/commands/
@@ -374,12 +390,13 @@ Imported game metadata will be stored locally instead of being requested every t
 - [x] Protect write actions with login and POST.
 - [x] Remove synchronization side effects from GET requests.
 - [x] Modularize MAL Insights views.
-- [ ] Add automated access and route tests.
+- [x] Add automated access and route tests.
 - [ ] Add a future global dashboard.
 
 ### Game Kiroku
 
-- [ ] Create the Django app.
+- [x] Create the Django app.
+- [x] Add the module dashboard and navigation.
 - [ ] Define library and playthrough models.
 - [ ] Integrate IGDB metadata imports.
 - [ ] Build the game library.

@@ -44,3 +44,17 @@ class PlatformAccessTests(TestCase):
             response,
             "test-owner",
         )
+    
+    def test_home_links_to_game_kiroku(self):
+        response = self.client.get(
+            reverse("core:home")
+        )
+
+        self.assertContains(
+            response,
+            reverse("games:dashboard"),
+        )
+        self.assertContains(
+            response,
+            "Game Kiroku",
+        )
