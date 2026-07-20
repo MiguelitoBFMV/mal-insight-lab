@@ -1,132 +1,22 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
+{% extends "games/base.html" %}
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+{% block title %}
+    Dashboard
+{% endblock %}
 
-    <title>Game Kiroku · MVS Tracker</title>
+{% block content %}
 
-    <link
-        rel="stylesheet"
-        href="{% static 'games/dashboard.css' %}"
-    >
-</head>
-
-<body>
-    <div class="game-layout">
-        <aside class="game-sidebar">
-            <header class="sidebar-brand">
-                <a href="{% url 'games:dashboard' %}">
-                    <span class="brand-mark" aria-hidden="true">
-                        GK
-                    </span>
-
-                    <span>
-                        <strong>Game Kiroku</strong>
-                        <small>ゲーム記録</small>
-                    </span>
-                </a>
-            </header>
-
-            <nav
-                class="sidebar-nav"
-                aria-label="Navegación de Game Kiroku"
-            >
-                <a
-                    class="sidebar-link sidebar-link--active"
-                    href="{% url 'games:dashboard' %}"
-                >
-                    <span aria-hidden="true">⌂</span>
-                    Dashboard
-                </a>
-
-                <span class="sidebar-link sidebar-link--disabled">
-                    <span aria-hidden="true">▦</span>
-                    Biblioteca
-                </span>
-
-                <span class="sidebar-link sidebar-link--disabled">
-                    <span aria-hidden="true">◆</span>
-                    Propios
-                </span>
-
-                <span class="sidebar-link sidebar-link--disabled">
-                    <span aria-hidden="true">♡</span>
-                    Wishlist
-                </span>
-
-                <span class="sidebar-link sidebar-link--disabled">
-                    <span aria-hidden="true">◈</span>
-                    Franquicias
-                </span>
-
-                <span class="sidebar-link sidebar-link--disabled">
-                    <span aria-hidden="true">●</span>
-                    Multiplayer
-                </span>
-            </nav>
-
-            <footer class="sidebar-footer">
-                <a href="{% url 'core:home' %}">
-                    ← MVS Tracker
-                </a>
-            </footer>
-        </aside>
-
-        <main class="game-main">
-            <nav
-                class="game-topbar"
-                aria-label="Acceso de usuario"
-            >
-                <div>
-                    <span class="topbar-module">Game Kiroku</span>
-                    <span class="topbar-state">Local library</span>
-                </div>
-
-                <div class="topbar-access">
-                    {% if user.is_authenticated %}
-                        <span>
-                            Owner · {{ user.username }}
-                        </span>
-
-                        <form
-                            method="post"
-                            action="{% url 'logout' %}"
-                        >
-                            {% csrf_token %}
-
-                            <button type="submit">
-                                Cerrar sesión
-                            </button>
-                        </form>
-                    {% else %}
-                        <span>Modo lectura</span>
-
-                        <a
-                            href="{% url 'login' %}?next={{ request.path|urlencode }}"
-                        >
-                            Iniciar sesión
-                        </a>
-                    {% endif %}
-                </div>
-            </nav>
-
-            <header class="dashboard-hero">
+    <header class="dashboard-hero">
                 <div>
                     <p class="dashboard-eyebrow">
                         ゲーム記録 · Personal Game Library
                     </p>
 
-                    <h1>Tu biblioteca gamer</h1>
+                    <h1>Your Game Library</h1>
 
                     <p>
-                        Organiza lo que ya tienes, registra cada recorrido
-                        y decide mejor qué jugar antes de comprar más.
+                        Organize what you own, track every playthrough
+                        and choose what to play next.
                     </p>
                 </div>
 
@@ -139,13 +29,13 @@
 
             <section
                 class="metric-grid"
-                aria-label="Resumen de biblioteca"
+                aria-label="Library summary"
             >
                 <article class="metric-card">
                     <span class="metric-icon">◆</span>
 
                     <div>
-                        <p>Posees</p>
+                        <p>Owned</p>
                         <strong>{{ owned_count }}</strong>
                     </div>
                 </article>
@@ -163,7 +53,7 @@
                     <span class="metric-icon">🏆</span>
 
                     <div>
-                        <p>Completados</p>
+                        <p>Completed</p>
                         <strong>{{ completed_count }}</strong>
                     </div>
                 </article>
@@ -192,7 +82,7 @@
                     <header class="panel-header">
                         <div>
                             <p class="panel-kicker">Library progress</p>
-                            <h2>Completados vs Juegos Adquiridos</h2>
+                            <h2>Completed vs Completable Games</h2>
                         </div>
                     </header>
 
@@ -203,18 +93,18 @@
                         >
                             <div>
                                 <strong>{{ completion_ratio }}%</strong>
-                                <span>Completado</span>
+                                <span>Completed</span>
                             </div>
                         </div>
 
                         <dl class="completion-data">
                             <div>
-                                <dt>Completados</dt>
+                                <dt>Completed</dt>
                                 <dd>{{ completed_count }}</dd>
                             </div>
 
                             <div>
-                                <dt>Juegos Adquiridos</dt>
+                                <dt>Completable Games</dt>
                                 <dd>{{ completable_owned_count }}</dd>
                             </div>
                         </dl>
@@ -225,7 +115,7 @@
                     <header class="panel-header">
                         <div>
                             <p class="panel-kicker">Playing now</p>
-                            <h2>Activos ahora</h2>
+                            <h2>Playing Now</h2>
                         </div>
 
                         <span class="panel-count">
@@ -240,7 +130,7 @@
                                     {% if entry.game.cover_url %}
                                         <img
                                             src="{{ entry.game.cover_url }}"
-                                            alt="Portada de {{ entry.game.title }}"
+                                            alt="{{ entry.game.title }} cover"
                                         >
                                     {% else %}
                                         <span>
@@ -254,7 +144,7 @@
                                         {% if entry.game.franchise %}
                                             {{ entry.game.franchise.name }}
                                         {% else %}
-                                            Juego independiente
+                                            Standalone Game
                                         {% endif %}
                                     </p>
 
@@ -262,7 +152,7 @@
 
                                     {% if entry.has_completed_history %}
                                         <span class="status-badge status-badge--replaying">
-                                            Rejugando
+                                            Replaying
                                         </span>
                                     {% else %}
                                         <span class="status-badge status-badge--playing">
@@ -289,7 +179,7 @@
                             </article>
                         {% empty %}
                             <p class="empty-state">
-                                No hay juegos marcados como jugando.
+                                No games are currently marked as playing.
                             </p>
                         {% endfor %}
                     </div>
@@ -333,13 +223,13 @@
                                             {% endif %}
                                         </p>
                                     {% empty %}
-                                        <p>Sin acceso registrado</p>
+                                        <p>No access registered</p>
                                     {% endfor %}
                                 </div>
                             </article>
                         {% empty %}
                             <p class="empty-state">
-                                No hay juegos multiplayer registrados.
+                                No multiplayer games are registered.
                             </p>
                         {% endfor %}
                     </div>
@@ -349,7 +239,7 @@
                     <header class="panel-header">
                         <div>
                             <p class="panel-kicker">History</p>
-                            <h2>Playthroughs recientes</h2>
+                            <h2>Recent Playthroughs</h2>
                         </div>
                     </header>
 
@@ -380,7 +270,7 @@
                             </article>
                         {% empty %}
                             <p class="empty-state">
-                                Todavía no hay playthroughs.
+                                No playthroughs have been registered yet.
                             </p>
                         {% endfor %}
                     </div>
@@ -391,10 +281,10 @@
                 <header class="section-heading">
                     <div>
                         <p class="panel-kicker">Local archive</p>
-                        <h2>Biblioteca inicial</h2>
+                        <h2>Library Preview</h2>
                     </div>
 
-                    <span>{{ library_preview|length }} registros visibles</span>
+                    <span>{{ library_preview|length }} visible entries</span>
                 </header>
 
                 <div class="library-grid">
@@ -404,7 +294,7 @@
                                 {% if entry.game.cover_url %}
                                     <img
                                         src="{{ entry.game.cover_url }}"
-                                        alt="Portada de {{ entry.game.title }}"
+                                        alt="{{ entry.game.title }} cover"
                                     >
                                 {% else %}
                                     <span>
@@ -424,7 +314,7 @@
                                     {% if entry.game.franchise %}
                                         {{ entry.game.franchise.name }}
                                     {% else %}
-                                        Sin franquicia
+                                        No Franchise
                                     {% endif %}
                                 </p>
 
@@ -432,7 +322,7 @@
 
                                 {% if entry.has_completed_history %}
                                     <span class="completion-history">
-                                        Completado anteriormente
+                                        Completed Before
                                     </span>
                                 {% endif %}
 
@@ -446,14 +336,14 @@
                                             {% endif %}
                                         </span>
                                     {% empty %}
-                                        <span>Sin acceso registrado</span>
+                                        <span>No access registered</span>
                                     {% endfor %}
                                 </footer>
                             </div>
                         </article>
                     {% empty %}
                         <p class="empty-state">
-                            La biblioteca todavía está vacía.
+                            The library is still empty.
                         </p>
                     {% endfor %}
                 </div>
@@ -461,9 +351,7 @@
 
             <footer class="game-footer">
                 <span>Game Kiroku · MVS Tracker</span>
-                <span>Datos reales desde Supabase</span>
+                <span>Live data from Supabase</span>
             </footer>
-        </main>
-    </div>
-</body>
-</html>
+
+{% endblock %}

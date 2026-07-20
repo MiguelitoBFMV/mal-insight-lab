@@ -168,11 +168,11 @@ class Game(models.Model):
 
 class LibraryEntry(models.Model):
     class Status(models.TextChoices):
-        PLAYING = "playing", "Jugando"
-        PAUSED = "paused", "Pausado"
-        DROPPED = "dropped", "Dropeado"
+        PLAYING = "playing", "Playing"
+        PAUSED = "paused", "Paused"
+        DROPPED = "dropped", "Dropped"
         PLAN_TO_PLAY = "plan_to_play", "Plan to Play"
-        COMPLETED = "completed", "Completado"
+        COMPLETED = "completed", "Completed"
         MULTIPLAYER = "multiplayer", "Multiplayer"
 
     game = models.OneToOneField(
@@ -249,14 +249,14 @@ class LibraryEntry(models.Model):
 
 class GameAccess(models.Model):
     class AccessType(models.TextChoices):
-        OWNED = "owned", "Propio"
+        OWNED = "owned", "Owned"
         WISHLIST = "wishlist", "Wishlist"
 
     class Platform(models.TextChoices):
         PC = "pc", "PC"
         PLAYSTATION_5 = "ps5", "PlayStation 5"
         NINTENDO_SWITCH_2 = "switch_2", "Nintendo Switch 2"
-        OTHER = "other", "Otra"
+        OTHER = "other", "Other"
 
     class Store(models.TextChoices):
         STEAM = "steam", "Steam"
@@ -338,16 +338,16 @@ class GameAccess(models.Model):
 
 class Playthrough(models.Model):
     class Status(models.TextChoices):
-        PLAYING = "playing", "Jugando"
-        PAUSED = "paused", "Pausado"
-        COMPLETED = "completed", "Completado"
-        DROPPED = "dropped", "Dropeado"
+        PLAYING = "playing", "Playing"
+        PAUSED = "paused", "Paused"
+        COMPLETED = "completed", "Completed"
+        DROPPED = "dropped", "Dropped"
 
     class TextLanguage(models.TextChoices):
-        JAPANESE = "ja", "Japonés"
-        ENGLISH = "en", "Inglés"
-        SPANISH = "es", "Español"
-        OTHER = "other", "Otro"
+        JAPANESE = "ja", "Japanese"
+        ENGLISH = "en", "English"
+        SPANISH = "es", "Spanish"
+        OTHER = "other", "Other"
 
     library_entry = models.ForeignKey(
         LibraryEntry,
