@@ -24,12 +24,16 @@ The project began as MAL Insight Lab, a personal MyAnimeList analytics dashboard
 
 MVS Tracker is in active development.
 
-The application currently runs locally and uses Supabase PostgreSQL as its shared database. MAL Insights and Game Kiroku are available; Game Kiroku now includes an explicit local-first IGDB import workflow and additional-content tracking for DLC and expansions.
+The application currently runs locally and uses Supabase PostgreSQL as its shared database. MAL Insights and Game Kiroku are available.
+
+The anime side of MAL Insights is functionally stable and includes automatic MyAnimeList OAuth renewal, optimized synchronization workflows, manual rescue support for entries omitted by the MAL list API, and unified Episode Signals for normal and manually rescued entries.
+
+Game Kiroku includes an explicit local-first IGDB import workflow and additional-content tracking for DLC and expansions.
 
 The platform supports two access levels:
 
 - Public read-only access for browsing data.
-- Authenticated owner access for synchronization, editing, tracking actions, and administration.
+- Authenticated owner access for synchronization, editing, tracking actions, OAuth connection, and administration.
 
 Public registration is intentionally disabled.
 
@@ -37,24 +41,41 @@ Public registration is intentionally disabled.
 
 ### MAL Insights
 
-Status: **Available**
+Status: **Available — anime workflow functionally complete**
 
 MAL Insights is the anime and manga analytics module connected to MyAnimeList and enriched with AniList metadata.
 
-Current features include:
+Current anime features include:
 
 - Anime library by MAL list status.
 - Watching and rewatching support.
-- Episode Signals.
+- Unified Episode Signals for Watching, Rewatching, and active manual rescues.
+- Progress, score, and status refresh for active Episode Signal entries.
+- AniList airing data, next-episode information, pending-episode calculations, and streaming links.
 - Seasonal anime discovery.
+- Add to Plan behavior that checks the real MAL list status before modifying an entry.
 - Franchise relation scanning.
 - Franchise Audit.
 - Sequel Radar.
+- Broadcast Watchlist.
 - Search and manual rescue tools.
+- Persistent `ManualTrackedAnime` fallbacks for entries omitted by the MAL list API.
+- Command Logs for episode, score, and status changes.
 - AniList metadata enrichment.
-- Manual synchronization controls.
+- Separate synchronization actions for MAL Library, Episode Signals, and Manual Rescues.
+- Optimized MAL Library synchronization with Created, Updated, and Unchanged classification.
+- Automatic MyAnimeList OAuth token renewal.
+- A single forced token refresh and retry after a MAL `401 invalid_token` response.
 - Public read-only mode.
-- Owner-only write actions.
+- Owner-only synchronization and write actions.
+- Automated regression tests for OAuth, MAL sync, Episode Signals, manual rescues, routes, and permissions.
+
+The current synchronization controls are intentionally separated:
+
+- **Sync MAL Library** updates the five MAL list statuses, personal progress, scores, Command Logs, Broadcast Watchlist data, and the local status context used by Sequel Radar.
+- **Sync Signals** checks only locally active Watching and Rewatching entries, including active manual rescues, then updates personal MAL progress and AniList airing information.
+- **Sync Manual Rescues** rebuilds and refreshes entries that the normal MAL list endpoint omits.
+- **Connect / Renew MAL** starts the owner-only OAuth authorization flow when the account must be connected again.
 
 Route:
 
@@ -220,11 +241,13 @@ Hibi Log will serve as the future cross-module activity dashboard, so a separate
 
 Read-only views are publicly accessible.
 
-Actions that modify external services, Supabase, or local application data require:
+Actions that modify external services, Supabase, or local application data normally require:
 
 - An authenticated user.
 - A POST request.
 - CSRF validation.
+
+The MyAnimeList OAuth connect and callback routes are authenticated owner flows that use OAuth state validation and PKCE rather than normal write-form POST handling.
 
 Opening a normal page never triggers an automatic synchronization.
 
@@ -235,6 +258,7 @@ Opening a normal page never triggers an automatic synchronization.
 - PostgreSQL
 - Supabase PostgreSQL
 - MyAnimeList API v2
+- OAuth 2.0 with PKCE and refresh tokens
 - AniList GraphQL API
 - IGDB API
 - Twitch application authentication for IGDB
@@ -296,10 +320,18 @@ mvs-tracker/
 │   ├── management/commands/
 │   ├── migrations/
 │   ├── services/
+│   │   ├── anime_list_sync.py
+│   │   ├── anilist_airing_sync.py
+│   │   ├── episode_signal_sync.py
+│   │   ├── mal_client.py
+│   │   ├── mal_oauth.py
+│   │   ├── manual_tracked_sync.py
+│   │   └── ...
 │   ├── static/mal_data/
 │   ├── web/
 │   │   ├── dashboard.py
 │   │   ├── library.py
+│   │   ├── oauth.py
 │   │   ├── relations.py
 │   │   ├── search.py
 │   │   ├── seasonal.py
@@ -307,6 +339,7 @@ mvs-tracker/
 │   ├── admin.py
 │   ├── apps.py
 │   ├── models.py
+│   ├── tests.py
 │   └── urls.py
 │
 ├── templates/
@@ -334,11 +367,20 @@ Create a `.env` file in the project root.
 SECRET_KEY=your-django-secret-key
 DEBUG=True
 DATABASE_URL=postgresql://...
-MAL_ACCESS_TOKEN=your-mal-access-token
+
+MAL_CLIENT_ID=your-mal-client-id
+MAL_CLIENT_SECRET=your-mal-client-secret
+MAL_REDIRECT_URI=http://127.0.0.1:8000/anime/oauth/mal/callback/
+
 IGDB_CLIENT_ID=your-twitch-client-id
 IGDB_CLIENT_SECRET=your-twitch-client-secret
+
 ALLOWED_HOSTS=127.0.0.1,localhost
 ```
+
+MyAnimeList access and refresh tokens are obtained through the owner-only OAuth flow and stored in the database. A permanent `MAL_ACCESS_TOKEN` is no longer required in `.env`.
+
+The Redirect URL configured in the MyAnimeList API client must match `MAL_REDIRECT_URI` exactly, including host, port, path, and trailing slash.
 
 ## Local Setup
 
@@ -356,28 +398,84 @@ Open:
 http://127.0.0.1:8000/
 ```
 
+After logging in as the owner, use **Connect / Renew MAL** once to authorize the application. Future MAL access-token expiration is handled automatically through the stored refresh token.
+
+## MAL Insights Synchronization
+
+### Sync MAL Library
+
+Fetches the five MAL anime-list statuses and updates the local archive.
+
+The sync loads existing records in bulk, compares relevant fields in memory, and writes only entries that actually changed.
+
+A normal result may look like:
+
+```text
+Total: 675
+Created: 0
+Updated: 1
+Unchanged: 674
+```
+
+### Sync Signals
+
+Processes only locally active Watching and Rewatching entries, regardless of whether they came from the normal MAL list endpoint or a manual rescue.
+
+For each active entry it:
+
+- Reads the real personal status and progress from MAL.
+- Updates local progress, score, and rewatch state.
+- Keeps active manual trackers aligned.
+- Creates Command Log events for relevant changes.
+- Refreshes AniList airing data.
+- Recalculates aired, pending, and next-episode information.
+
+### Sync Manual Rescues
+
+Refreshes active `ManualTrackedAnime` records and reconstructs their local `AnimeEntry` data when necessary.
+
+This workflow exists for rare cases where an anime appears in the user's real MAL list but is omitted by the normal MAL list API response.
+
+### Rescue an omitted anime
+
+```bash
+python manage.py rescue_anime_entry MAL_ID   --status watching   --episodes-watched 1   --sync-airing
+```
+
+The rescue command creates or updates the local anime entry, stores a persistent manual tracker, and optionally retrieves AniList airing information.
+
+After the initial rescue, normal progress updates for active rescued anime are handled by **Sync Signals**.
+
 ## Running Tests
 
 MVS Tracker uses an isolated SQLite in-memory database for automated tests.
 
 ```bash
-python manage.py test \
-  core \
-  mal_data \
-  games \
-  --settings=config.test_settings \
-  --verbosity=2
+python manage.py test   core   mal_data   games   --settings=config.test_settings   --verbosity=2
 ```
 
 The test database is created and destroyed automatically. It does not modify Supabase.
 
-At the current project checkpoint, the automated suite contains **89 passing tests**.
+At the current project checkpoint, the automated suite contains **96 passing tests**.
+
+The MAL Insights regression suite covers:
+
+- Public and protected routes.
+- OAuth token exchange and storage.
+- Automatic refresh of expired MAL tokens.
+- A single refresh and retry after a MAL 401 response.
+- Created, Updated, and Unchanged MAL Library synchronization paths.
+- Watching, Rewatching, and manual-rescue Episode Signal selection.
+- Progress synchronization and Command Log generation.
+- Manual rescue synchronization from real MAL progress.
 
 ## Data Sources
 
 ### MyAnimeList
 
 Primary source for personal anime and manga list data.
+
+MyAnimeList OAuth credentials are handled through an owner-authorized flow. Access and refresh tokens are stored in Supabase, access tokens are renewed automatically before expiration, and a failed API request caused by an invalid access token is retried once after a forced refresh.
 
 ### AniList
 
@@ -414,6 +512,7 @@ Planned primary listening-data source for the music module. Music will be the fi
 - Services separated from HTTP views.
 - Modules organized by domain.
 - External APIs treated as import and synchronization sources, not permanent runtime dependencies.
+- Automated tests use an isolated in-memory database and never modify Supabase.
 
 ## Roadmap
 
@@ -491,10 +590,19 @@ Planned primary listening-data source for the music module. Music will be the fi
 
 ### MAL Insights
 
+- [x] Add automatic MyAnimeList OAuth token renewal.
+- [x] Add one-time forced refresh and retry after MAL 401 responses.
+- [x] Split MAL Library, Episode Signals, and Manual Rescue synchronization.
+- [x] Optimize MAL Library synchronization to skip unchanged entries.
+- [x] Unify Episode Signals for normal Watching, Rewatching, and manual rescues.
+- [x] Synchronize active Episode Signal progress directly from MAL.
+- [x] Generate Command Logs for rescued-entry progress changes.
+- [x] Add persistent manual rescue fallbacks for MAL list API omissions.
+- [x] Add regression tests for OAuth and synchronization workflows.
 - [ ] Expand manga support.
 - [ ] Add manga archive views.
 - [ ] Explore chapter availability signals.
-- [ ] Improve token renewal workflow.
+- [ ] Detect when a manually rescued anime begins appearing normally in the MAL list API.
 - [ ] Improve entries without confirmed MAL IDs.
 
 ## Security
@@ -503,7 +611,9 @@ Never commit:
 
 - `.env`
 - Database credentials
+- MAL client secrets
 - MAL access tokens
+- MAL refresh tokens
 - IGDB client secrets
 - API tokens
 - Raw private API responses
