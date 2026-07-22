@@ -1,0 +1,224 @@
+{% extends "games/base.html" %}
+
+{% block title %}
+    Add Game
+{% endblock %}
+
+{% block module_name %}
+    Add Game · Game Kiroku
+{% endblock %}
+
+{% block content %}
+    <header class="igdb-page-header">
+        <div>
+            <p class="dashboard-eyebrow">
+                IGDB Metadata Import
+            </p>
+
+            <h1>Add Game</h1>
+
+            <p>
+                Search IGDB and select the correct edition
+                before adding it to your local library.
+            </p>
+        </div>
+
+        {% if query and not error_message %}
+            <span class="library-result-count">
+                {{ result_count }}
+                {% if result_count == 1 %}
+                    result
+                {% else %}
+                    results
+                {% endif %}
+            </span>
+        {% endif %}
+    </header>
+
+    <section
+        class="igdb-search-panel"
+        aria-labelledby="igdb-search-title"
+    >
+        <header>
+            <p class="panel-kicker">
+                External Metadata
+            </p>
+
+            <h2 id="igdb-search-title">
+                Search IGDB
+            </h2>
+        </header>
+
+        <form
+            method="get"
+            class="igdb-search-form"
+        >
+            <div class="filter-field">
+                <label for="igdb-search-query">
+                    Game title
+                </label>
+
+                <input
+                    id="igdb-search-query"
+                    type="search"
+                    name="q"
+                    value="{{ query }}"
+                    placeholder="Yakuza Kiwami 2..."
+                    required
+                    autofocus
+                >
+            </div>
+
+            <button type="submit">
+                Search IGDB
+            </button>
+        </form>
+    </section>
+
+    {% if error_message %}
+        <section
+            class="igdb-search-error"
+            role="alert"
+        >
+            <strong>IGDB search failed.</strong>
+            <p>{{ error_message }}</p>
+        </section>
+    {% endif %}
+
+    {% if query and not error_message %}
+        <section
+            class="igdb-results-section"
+            aria-labelledby="igdb-results-title"
+        >
+            <header class="section-heading">
+                <div>
+                    <p class="panel-kicker">
+                        Search Results
+                    </p>
+
+                    <h2 id="igdb-results-title">
+                        Select the Correct Game
+                    </h2>
+                </div>
+            </header>
+
+            <div class="igdb-result-grid">
+                {% for result in results %}
+                    <article class="igdb-result-card">
+                        <div class="igdb-result-cover">
+                            {% if result.cover_url %}
+                                <img
+                                    src="{{ result.cover_url }}"
+                                    alt="{{ result.title }} cover"
+                                >
+                            {% else %}
+                                <span>
+                                    {{ result.title|slice:":2"|upper }}
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <div class="igdb-result-copy">
+                            <header>
+                                <p>
+                                    IGDB {{ result.igdb_id }}
+                                </p>
+
+                                <h3>{{ result.title }}</h3>
+
+                                {% if result.release_date %}
+                                    <span>
+                                        {{ result.release_date|date:"Y" }}
+                                    </span>
+                                {% else %}
+                                    <span>
+                                        Release date unknown
+                                    </span>
+                                {% endif %}
+                            </header>
+
+                            {% if result.summary %}
+                                <p class="igdb-result-summary">
+                                    {{ result.summary }}
+                                </p>
+                            {% else %}
+                                <p
+                                    class="
+                                        igdb-result-summary
+                                        igdb-result-summary--empty
+                                    "
+                                >
+                                    No synopsis available.
+                                </p>
+                            {% endif %}
+
+                            <dl class="igdb-result-data">
+                                <div>
+                                    <dt>Genres</dt>
+
+                                    <dd>
+                                        {% if result.genres %}
+                                            {{ result.genres|join:", " }}
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </dd>
+                                </div>
+
+                                <div>
+                                    <dt>Platforms</dt>
+
+                                    <dd>
+                                        {% if result.platforms %}
+                                            {{ result.platforms|join:", " }}
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </dd>
+                                </div>
+                            </dl>
+
+                            <footer class="igdb-result-actions">
+                                {% if result.local_game %}
+                                    <span class="igdb-imported-badge">
+                                        Already Imported
+                                    </span>
+
+                                    <a
+                                        href="{{ result.local_game.get_absolute_url }}"
+                                    >
+                                        Open Local Game
+                                    </a>
+                                {% else %}
+                                    <span class="igdb-available-badge">
+                                        Available to Import
+                                    </span>
+
+                                    <a
+                                        href="{% url 'games:igdb_import' result.igdb_id %}"
+                                    >
+                                        Review Import
+                                    </a>
+                                {% endif %}
+                            </footer>
+                        </div>
+                    </article>
+                {% empty %}
+                    <div class="empty-library-result">
+                        <strong>No IGDB Results Found.</strong>
+
+                        <p>
+                            Try a shorter title or remove edition
+                            and platform terms.
+                        </p>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+
+    <footer class="game-footer">
+        <span>Game Kiroku · IGDB Search</span>
+        <span>Read-only external lookup</span>
+    </footer>
+{% endblock %}

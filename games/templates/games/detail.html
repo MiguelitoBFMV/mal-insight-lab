@@ -72,7 +72,7 @@
                     </p>
                 {% else %}
                     <p class="game-detail-summary game-detail-summary--empty">
-                        Game metadata has not been enriched from IGDB yet.
+                        No synopsis available yet.
                     </p>
                 {% endif %}
 
@@ -189,80 +189,152 @@
                 </span>
             </header>
 
-            <form
-                method="post"
-                action="{% url 'games:update_entry' game.slug %}"
-                class="detail-owner-form"
+            <details
+                class="detail-owner-editor"
+                {% if owner_form.errors %}
+                    open
+                {% endif %}
             >
-                {% csrf_token %}
+                <summary>
+                    Edit Library Entry
+                </summary>
 
-                {% if owner_form.non_field_errors %}
-                    <div class="detail-form-error detail-form-error--wide">
-                        {% for error in owner_form.non_field_errors %}
-                            <p>{{ error }}</p>
-                        {% endfor %}
-                    </div>
+                {% if game.igdb_id %}
+                    <form
+                        method="post"
+                        action="{% url 'games:igdb_refresh' game.slug %}"
+                        class="igdb-refresh-form"
+                    >
+                        {% csrf_token %}
+
+                        <div>
+                            <strong>IGDB Metadata</strong>
+
+                            <small>
+                                Update title, synopsis, images,
+                                release date, genres, platforms
+                                and external duration.
+                            </small>
+                        </div>
+
+                        <button type="submit">
+                            Refresh Metadata
+                        </button>
+                    </form>
                 {% endif %}
 
-                <div class="detail-owner-field">
-                    <label
-                        for="{{ owner_form.main_story_hours_override.id_for_label }}"
-                    >
-                        {{ owner_form.main_story_hours_override.label }}
-                    </label>
+                <form
+                    method="post"
+                    action="{% url 'games:update_entry' game.slug %}"
+                    class="detail-owner-form"
+                >
+                    {% csrf_token %}
 
-                    {{ owner_form.main_story_hours_override }}
+                    {% if owner_form.non_field_errors %}
+                        <div class="detail-form-error detail-form-error--wide">
+                            {% for error in owner_form.non_field_errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
 
-                    <small>
-                        Leave blank to use the future IGDB estimate.
-                    </small>
+                    <div class="detail-owner-field">
+                        <label
+                            for="{{ owner_form.status.id_for_label }}"
+                        >
+                            {{ owner_form.status.label }}
+                        </label>
 
-                    {% for error in owner_form.main_story_hours_override.errors %}
-                        <p class="detail-form-error">
-                            {{ error }}
-                        </p>
-                    {% endfor %}
-                </div>
+                        {{ owner_form.status }}
 
-                <div class="detail-owner-field detail-owner-field--check">
-                    <label
-                        class="detail-owner-check"
-                        for="{{ owner_form.has_platinum.id_for_label }}"
-                    >
-                        {{ owner_form.has_platinum }}
+                        {% if owner_form.status.help_text %}
+                            <small>
+                                {{ owner_form.status.help_text }}
+                            </small>
+                        {% endif %}
 
-                        <span>
-                            {{ owner_form.has_platinum.label }}
-                        </span>
-                    </label>
+                        {% for error in owner_form.status.errors %}
+                            <p class="detail-form-error">
+                                {{ error }}
+                            </p>
+                        {% endfor %}
+                    </div>                    
 
-                    {% for error in owner_form.has_platinum.errors %}
-                        <p class="detail-form-error">
-                            {{ error }}
-                        </p>
-                    {% endfor %}
-                </div>
+                    <div class="detail-owner-field">
+                        <label
+                            for="{{ owner_form.main_story_hours_override.id_for_label }}"
+                        >
+                            {{ owner_form.main_story_hours_override.label }}
+                        </label>
 
-                <div class="detail-owner-field detail-owner-field--notes">
-                    <label for="{{ owner_form.notes.id_for_label }}">
-                        {{ owner_form.notes.label }}
-                    </label>
+                        {{ owner_form.main_story_hours_override }}
 
-                    {{ owner_form.notes }}
+                        <small>
+                            Leave blank to use the future IGDB estimate.
+                        </small>
 
-                    {% for error in owner_form.notes.errors %}
-                        <p class="detail-form-error">
-                            {{ error }}
-                        </p>
-                    {% endfor %}
-                </div>
+                        {% for error in owner_form.main_story_hours_override.errors %}
+                            <p class="detail-form-error">
+                                {{ error }}
+                            </p>
+                        {% endfor %}
+                    </div>
 
-                <div class="detail-owner-actions">
-                    <button type="submit">
-                        Save Library Entry
-                    </button>
-                </div>
-            </form>
+                    <div class="detail-owner-field detail-owner-field--check">
+                        <label
+                            class="detail-owner-check"
+                            for="{{ owner_form.has_platinum.id_for_label }}"
+                        >
+                            {{ owner_form.has_platinum }}
+
+                            <span>
+                                {{ owner_form.has_platinum.label }}
+                            </span>
+                        </label>
+
+                        {% for error in owner_form.has_platinum.errors %}
+                            <p class="detail-form-error">
+                                {{ error }}
+                            </p>
+                        {% endfor %}
+                    </div>
+
+                    <div class="detail-owner-field detail-owner-field--notes">
+                        <label for="{{ owner_form.notes.id_for_label }}">
+                            {{ owner_form.notes.label }}
+                        </label>
+
+                        {{ owner_form.notes }}
+
+                        {% for error in owner_form.notes.errors %}
+                            <p class="detail-form-error">
+                                {{ error }}
+                            </p>
+                        {% endfor %}
+                    </div>
+
+                    <div class="detail-owner-actions">
+                        <button type="submit">
+                            Save Library Entry
+                        </button>
+                    </div>
+                </form>
+            </details>
+
+            {% if request.GET.igdb_refresh == "success" %}
+                <p class="igdb-refresh-message igdb-refresh-message--success">
+                    IGDB metadata was updated successfully.
+                </p>
+            {% elif request.GET.igdb_refresh == "error" %}
+                <p class="igdb-refresh-message igdb-refresh-message--error">
+                    IGDB metadata could not be updated.
+                </p>
+            {% elif request.GET.igdb_refresh == "unlinked" %}
+                <p class="igdb-refresh-message igdb-refresh-message--error">
+                    This local game is not linked to IGDB.
+                </p>
+            {% endif %}
+        
         </section>
     {% endif %}
 
@@ -808,6 +880,394 @@
             {% endif %}
         </section>
     </div>
+
+    <section
+        class="dashboard-panel additional-content-panel"
+        aria-labelledby="additional-content-title"
+    >
+        <header class="panel-header">
+            <div>
+                <p class="panel-kicker">
+                    Expansions & DLC
+                </p>
+
+                <h2 id="additional-content-title">
+                    Additional Content
+                </h2>
+            </div>
+
+            <span class="panel-count">
+                {{ tracked_content_count }}
+            </span>
+        </header>
+
+        {% if user.is_authenticated %}
+            <details
+                class="content-creator"
+                {% if new_content_form.errors %}
+                    open
+                {% endif %}
+            >
+                <summary>
+                    Add Manual Content
+                </summary>
+
+                <form
+                    method="post"
+                    action="{% url 'games:create_manual_content' game.slug %}"
+                    class="content-owner-form"
+                >
+                    {% csrf_token %}
+
+                    {% if new_content_form.non_field_errors %}
+                        <div class="detail-form-error detail-form-error--wide">
+                            {% for error in new_content_form.non_field_errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    {% for field in new_content_form %}
+                        <div
+                            class="
+                                playthrough-editor-field
+                                {% if field.name == 'notes' %}
+                                    content-field--notes
+                                {% endif %}
+                            "
+                        >
+                            <label for="{{ field.id_for_label }}">
+                                {{ field.label }}
+                            </label>
+
+                            {{ field }}
+
+                            {% for error in field.errors %}
+                                <p class="detail-form-error">
+                                    {{ error }}
+                                </p>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+
+                    <div class="content-owner-actions">
+                        <button type="submit">
+                            Add Additional Content
+                        </button>
+                    </div>
+                </form>
+            </details>
+        {% endif %}
+
+        <section
+            class="tracked-content-section"
+            aria-labelledby="tracked-content-title"
+        >
+            <header class="content-section-heading">
+                <div>
+                    <span>Local Tracking</span>
+
+                    <h3 id="tracked-content-title">
+                        Tracked Content
+                    </h3>
+                </div>
+            </header>
+
+            <div class="tracked-content-grid">
+                {% for content in entry.detail_additional_contents %}
+                    <article class="tracked-content-card">
+                        <div class="tracked-content-cover">
+                            {% if content.cover_url %}
+                                <img
+                                    src="{{ content.cover_url }}"
+                                    alt="{{ content.title }} cover"
+                                >
+                            {% else %}
+                                <span>
+                                    {{ content.title|slice:":2"|upper }}
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <div class="tracked-content-copy">
+                            <header>
+                                <p>
+                                    {{ content.get_content_type_display }}
+                                </p>
+
+                                <h3>{{ content.title }}</h3>
+
+                                <div class="tracked-content-status">
+                                    <span
+                                        class="
+                                            status-badge
+                                            status-badge--{{ content.status }}
+                                        "
+                                    >
+                                        {{ content.get_status_display }}
+                                    </span>
+
+                                    {% if content.completed_on %}
+                                        <span>
+                                            Completed
+                                            {{ content.completed_on|date:"M d, Y" }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </header>
+
+                            {% if content.summary %}
+                                <p class="tracked-content-summary">
+                                    {{ content.summary }}
+                                </p>
+                            {% endif %}
+
+                            {% if content.notes %}
+                                <p class="tracked-content-notes">
+                                    {{ content.notes }}
+                                </p>
+                            {% endif %}
+
+                            {% if user.is_authenticated %}
+                                <details
+                                    class="content-editor"
+                                    {% if content.owner_form.errors %}
+                                        open
+                                    {% endif %}
+                                >
+                                    <summary>
+                                        Manage Content
+                                    </summary>
+
+                                    <form
+                                        method="post"
+                                        action="{% url 'games:update_content' game.slug content.pk %}"
+                                        class="content-owner-form"
+                                    >
+                                        {% csrf_token %}
+
+                                        {% if content.owner_form.non_field_errors %}
+                                            <div class="detail-form-error detail-form-error--wide">
+                                                {% for error in content.owner_form.non_field_errors %}
+                                                    <p>{{ error }}</p>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+
+                                        {% for field in content.owner_form %}
+                                            <div
+                                                class="
+                                                    playthrough-editor-field
+                                                    {% if field.name == 'notes' %}
+                                                        content-field--notes
+                                                    {% endif %}
+                                                "
+                                            >
+                                                <label for="{{ field.id_for_label }}">
+                                                    {{ field.label }}
+                                                </label>
+
+                                                {{ field }}
+
+                                                {% for error in field.errors %}
+                                                    <p class="detail-form-error">
+                                                        {{ error }}
+                                                    </p>
+                                                {% endfor %}
+                                            </div>
+                                        {% endfor %}
+
+                                        <div class="content-owner-actions">
+                                            <button type="submit">
+                                                Save Content
+                                            </button>
+                                        </div>
+                                    </form>
+
+                                    <form
+                                        method="post"
+                                        action="{% url 'games:delete_content' game.slug content.pk %}"
+                                        class="content-delete-form"
+                                    >
+                                        {% csrf_token %}
+
+                                        <p>
+                                            This removes the local tracking record.
+                                            It does not delete the main game.
+                                        </p>
+
+                                        <button type="submit">
+                                            Delete Content
+                                        </button>
+                                    </form>
+                                </details>
+                            {% endif %}
+                        </div>
+                    </article>
+                {% empty %}
+                    <p class="empty-state">
+                        No DLC or expansion is currently tracked.
+                    </p>
+                {% endfor %}
+            </div>
+        </section>
+
+        {% if detected_contents %}
+            <section
+                class="detected-content-section"
+                aria-labelledby="detected-content-title"
+            >
+                <header class="content-section-heading">
+                    <div>
+                        <span>IGDB Relations</span>
+
+                        <h3 id="detected-content-title">
+                            Detected on IGDB
+                        </h3>
+                    </div>
+
+                    <strong>
+                        {{ detected_contents|length }}
+                    </strong>
+                </header>
+
+                <p class="detected-content-intro">
+                    Choose whether each item belongs under this
+                    game or should be reviewed as a separate entry.
+                </p>
+
+                <div class="detected-content-grid">
+                    {% for detected in detected_contents %}
+                        <article class="detected-content-card">
+                            <div class="detected-content-cover">
+                                {% if detected.cover_url %}
+                                    <img
+                                        src="{{ detected.cover_url }}"
+                                        alt="{{ detected.title }} cover"
+                                    >
+                                {% else %}
+                                    <span>
+                                        {{ detected.title|slice:":2"|upper }}
+                                    </span>
+                                {% endif %}
+                            </div>
+
+                            <div class="detected-content-copy">
+                                <header>
+                                    <p>
+                                        {{ detected.content_type_label }}
+                                        · IGDB {{ detected.igdb_id }}
+                                    </p>
+
+                                    <h3>{{ detected.title }}</h3>
+
+                                    {% if detected.first_release_date %}
+                                        <span>
+                                            Released
+                                            {{ detected.first_release_date|date:"M d, Y" }}
+                                        </span>
+                                    {% endif %}
+                                </header>
+
+                                {% if detected.summary %}
+                                    <p class="detected-content-summary">
+                                        {{ detected.summary }}
+                                    </p>
+                                {% endif %}
+
+                                {% if detected.local_game %}
+                                    <div class="detected-content-actions">
+                                        <span class="igdb-imported-badge">
+                                            Separate Game
+                                        </span>
+
+                                        <a
+                                            href="{{ detected.local_game.get_absolute_url }}"
+                                        >
+                                            Open Local Game
+                                        </a>
+                                    </div>
+                                {% elif user.is_authenticated %}
+                                    <details
+                                        class="detected-content-track"
+                                        {% if detected.track_form.errors %}
+                                            open
+                                        {% endif %}
+                                    >
+                                        <summary>
+                                            Track Under This Game
+                                        </summary>
+
+                                        <form
+                                            method="post"
+                                            action="{% url 'games:track_igdb_content' game.slug detected.igdb_id %}"
+                                            class="detected-content-form"
+                                        >
+                                            {% csrf_token %}
+
+                                            {% if detected.track_form.non_field_errors %}
+                                                <div class="detail-form-error detail-form-error--wide">
+                                                    {% for error in detected.track_form.non_field_errors %}
+                                                        <p>{{ error }}</p>
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+
+                                            {% for field in detected.track_form %}
+                                                <div
+                                                    class="
+                                                        playthrough-editor-field
+                                                        {% if field.name == 'notes' %}
+                                                            detected-content-field--notes
+                                                        {% endif %}
+                                                    "
+                                                >
+                                                    <label for="{{ field.id_for_label }}">
+                                                        {{ field.label }}
+                                                    </label>
+
+                                                    {{ field }}
+
+                                                    {% for error in field.errors %}
+                                                        <p class="detail-form-error">
+                                                            {{ error }}
+                                                        </p>
+                                                    {% endfor %}
+                                                </div>
+                                            {% endfor %}
+
+                                            <div class="detected-content-submit">
+                                                <button type="submit">
+                                                    Add Under {{ game.title }}
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </details>
+
+                                    <div class="detected-content-actions">
+                                        <a
+                                            href="{% url 'games:igdb_import' detected.igdb_id %}"
+                                        >
+                                            Review as Separate Game
+                                        </a>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+            </section>
+        {% elif game.igdb_id %}
+            <section class="detected-content-empty">
+                <strong>No untracked IGDB content detected.</strong>
+
+                <p>
+                    Refresh the game metadata if IGDB has added
+                    new DLC or expansion relationships.
+                </p>
+            </section>
+        {% endif %}
+    </section>
 
     {% if user.is_authenticated and entry.status != "multiplayer" %}
         <section class="dashboard-panel new-playthrough-panel">

@@ -91,6 +91,10 @@ def dashboard(request):
         .count()
     )
 
+    platinum_count = LibraryEntry.objects.filter(
+        has_platinum=True
+    ).count()
+
     plan_to_play_count = LibraryEntry.objects.filter(
         status=LibraryEntry.Status.PLAN_TO_PLAY
     ).count()
@@ -115,6 +119,7 @@ def dashboard(request):
         "owned_count": owned_count,
         "wishlist_count": wishlist_count,
         "completed_count": completed_count,
+        "platinum_count": platinum_count,
         "plan_to_play_count": plan_to_play_count,
         "multiplayer_count": multiplayer_count,
         "completion_ratio": completion_ratio,

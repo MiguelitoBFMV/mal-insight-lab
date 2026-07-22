@@ -3,6 +3,7 @@ from django.urls import path
 from .web import dashboard as dashboard_views
 from .web import library as library_views
 from .web import detail as detail_views
+from .web import igdb as igdb_views
 
 app_name = "games"
 
@@ -17,6 +18,16 @@ urlpatterns = [
         "library/",
         library_views.library,
         name="library",
+    ),
+    path(
+        "igdb/search/",
+        igdb_views.igdb_search,
+        name="igdb_search",
+    ),
+        path(
+        "igdb/<int:igdb_id>/import/",
+        igdb_views.igdb_import,
+        name="igdb_import",
     ),
     path(
         "library/<slug:slug>/",
@@ -35,6 +46,11 @@ urlpatterns = [
         ),
         detail_views.update_playthrough_state,
         name="update_playthrough_state",
+    ),
+        path(
+        "library/<slug:slug>/igdb/refresh/",
+        igdb_views.igdb_refresh,
+        name="igdb_refresh",
     ),
     path(
         (
@@ -75,5 +91,38 @@ urlpatterns = [
         ),
         detail_views.delete_access,
         name="delete_access",
+    ),
+    path(
+        (
+            "library/<slug:slug>/"
+            "content/create/"
+        ),
+        detail_views.create_manual_content,
+        name="create_manual_content",
+    ),
+    path(
+        (
+            "library/<slug:slug>/"
+            "content/igdb/"
+            "<int:igdb_content_id>/track/"
+        ),
+        detail_views.track_igdb_content,
+        name="track_igdb_content",
+    ),
+    path(
+        (
+            "library/<slug:slug>/"
+            "content/<int:content_id>/update/"
+        ),
+        detail_views.update_content,
+        name="update_content",
+    ),
+    path(
+        (
+            "library/<slug:slug>/"
+            "content/<int:content_id>/delete/"
+        ),
+        detail_views.delete_content,
+        name="delete_content",
     ),
 ]

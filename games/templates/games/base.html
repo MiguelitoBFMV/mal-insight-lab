@@ -64,6 +64,19 @@
                     Library
                 </a>
 
+                {% if user.is_authenticated %}
+                    <a
+                        class="sidebar-link
+                        {% if active_page == 'igdb_search' %}
+                            sidebar-link--active
+                        {% endif %}"
+                        href="{% url 'games:igdb_search' %}"
+                    >
+                        <span aria-hidden="true">＋</span>
+                        Add Game
+                    </a>
+                {% endif %}
+
                 <a
                     class="sidebar-link
                     {% if active_access == 'owned' %}

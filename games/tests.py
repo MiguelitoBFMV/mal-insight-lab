@@ -457,7 +457,14 @@ class GameKirokuOwnerControlsTests(TestCase):
 
         cls.entry = LibraryEntry.objects.create(
             game=cls.game,
-            status=LibraryEntry.Status.PLAYING,
+            status=LibraryEntry.Status.PLAN_TO_PLAY,
+        )
+
+        cls.access = GameAccess.objects.create(
+            library_entry=cls.entry,
+            access_type=GameAccess.AccessType.OWNED,
+            platform_name=GameAccess.Platform.PC,
+            store=GameAccess.Store.STEAM,
         )
 
     def test_owner_controls_are_hidden_from_anonymous_users(self):
@@ -552,6 +559,9 @@ class GameKirokuOwnerControlsTests(TestCase):
                 },
             ),
             {
+                "status": (
+                    LibraryEntry.Status.PLAN_TO_PLAY
+                ),
                 "has_platinum": "on",
                 "main_story_hours_override": "18.5",
                 "notes": "Priority replay candidate.",
@@ -565,6 +575,10 @@ class GameKirokuOwnerControlsTests(TestCase):
 
         self.entry.refresh_from_db()
 
+        self.assertEqual(
+            self.entry.status,
+            LibraryEntry.Status.PLAN_TO_PLAY,
+        )
         self.assertTrue(self.entry.has_platinum)
         self.assertEqual(
             self.entry.main_story_hours_override,
@@ -585,6 +599,13 @@ class GameKirokuOwnerControlsTests(TestCase):
             status=LibraryEntry.Status.MULTIPLAYER,
         )
 
+        GameAccess.objects.create(
+            library_entry=multiplayer_entry,
+            access_type=GameAccess.AccessType.OWNED,
+            platform_name=GameAccess.Platform.PC,
+            store=GameAccess.Store.STEAM,
+        )
+
         self.client.force_login(self.owner)
 
         response = self.client.post(
@@ -595,6 +616,9 @@ class GameKirokuOwnerControlsTests(TestCase):
                 },
             ),
             {
+                "status": (
+                    LibraryEntry.Status.MULTIPLAYER
+                ),
                 "main_story_hours_override": "5",
                 "notes": "",
             },
@@ -2360,24 +2384,6 @@ class GameKirokuAccessManagementTests(TestCase):
             GameAccess.AccessType.OWNED,
         )
 
-        def test_anonymous_delete_redirects_to_login(
-            self,
-        ):
-            response = self.client.post(
-                self.delete_url()
-            )
-
-            self.assertEqual(response.status_code, 302)
-            self.assertIn(
-                reverse("login"),
-                response.url,
-            )
-            self.assertTrue(
-                GameAccess.objects.filter(
-                    pk=self.used_access.pk
-                ).exists()
-            )
-
     def test_anonymous_delete_redirects_to_login(
         self,
     ):
@@ -2612,3 +2618,4 @@ class GameKirokuAccessManagementTests(TestCase):
             self.used_access.notes,
             "Notes remain editable.",
         )
+

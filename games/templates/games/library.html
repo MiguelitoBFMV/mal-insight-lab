@@ -200,6 +200,21 @@
                             {% endif %}
                         </header>
 
+                        {% if entry.game.summary %}
+                            <p class="library-card-summary">
+                                {{ entry.game.summary }}
+                            </p>
+                        {% else %}
+                            <p
+                                class="
+                                    library-card-summary
+                                    library-card-summary--empty
+                                "
+                            >
+                                No synopsis available yet.
+                            </p>
+                        {% endif %}
+
                         <div class="library-status-row">
                             {% if entry.status == "playing" and entry.has_completed_history %}
                                 <span class="status-badge status-badge--replaying">

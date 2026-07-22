@@ -9,18 +9,248 @@ from django.http import HttpResponseBadRequest
 
 from games.forms import (
     GameAccessOwnerForm,
+    GameContentOwnerForm,
+    IGDBGameContentTrackForm,
     LibraryEntryOwnerForm,
     NewPlaythroughForm,
     PlaythroughOwnerForm,
 )
 from games.models import (
+    Game,
     GameAccess,
+    GameContent,
     LibraryEntry,
-    Playthrough)
+    Playthrough,
+)
 from games.services.playthrough_state import (
     change_playthrough_state,
     start_new_playthrough,
 )
+from games.services.igdb_normalizer import (
+    build_igdb_image_url,
+    unix_timestamp_to_date,
+)
+
+IGDB_CONTENT_RELATIONS = (
+    (
+        "dlcs",
+        GameContent.ContentType.DLC,
+    ),
+    (
+        "expansions",
+        GameContent.ContentType.EXPANSION,
+    ),
+    (
+        "standalone_expansions",
+        GameContent.ContentType.STANDALONE_EXPANSION,
+    ),
+)
+
+
+def _normalize_igdb_content_item(
+    payload,
+    content_type,
+):
+    if not isinstance(payload, dict):
+        return None
+
+    try:
+        igdb_id = int(
+            payload.get("id")
+        )
+    except (
+        TypeError,
+        ValueError,
+    ):
+        return None
+
+    title = str(
+        payload.get("name") or ""
+    ).strip()
+
+    if not title:
+        return None
+
+    cover = payload.get("cover")
+
+    if not isinstance(cover, dict):
+        cover = {}
+
+    return {
+        "igdb_id": igdb_id,
+        "title": title,
+        "content_type": content_type,
+        "content_type_label": dict(
+            GameContent.ContentType.choices
+        ).get(
+            content_type,
+            "Other",
+        ),
+        "summary": str(
+            payload.get("summary") or ""
+        ).strip(),
+        "cover_url": build_igdb_image_url(
+            cover.get("image_id"),
+            size="cover_big_2x",
+        ),
+        "first_release_date": (
+            unix_timestamp_to_date(
+                payload.get(
+                    "first_release_date"
+                )
+            )
+        ),
+        "igdb_payload": payload,
+    }
+
+
+def _iter_igdb_content_items(
+    game,
+):
+    payload = game.igdb_payload
+
+    if not isinstance(payload, dict):
+        return
+
+    seen_ids = set()
+
+    for (
+        relation_name,
+        content_type,
+    ) in IGDB_CONTENT_RELATIONS:
+        related_items = (
+            payload.get(relation_name)
+            or []
+        )
+
+        if not isinstance(
+            related_items,
+            list,
+        ):
+            continue
+
+        for item in related_items:
+            normalized_item = (
+                _normalize_igdb_content_item(
+                    item,
+                    content_type,
+                )
+            )
+
+            if normalized_item is None:
+                continue
+
+            igdb_id = normalized_item[
+                "igdb_id"
+            ]
+
+            if igdb_id in seen_ids:
+                continue
+
+            seen_ids.add(igdb_id)
+
+            yield normalized_item
+
+
+def _find_igdb_content_item(
+    game,
+    igdb_content_id,
+):
+    try:
+        igdb_content_id = int(
+            igdb_content_id
+        )
+    except (
+        TypeError,
+        ValueError,
+    ):
+        return None
+
+    return next(
+        (
+            item
+            for item
+            in _iter_igdb_content_items(
+                game
+            )
+            if (
+                item["igdb_id"]
+                == igdb_content_id
+            )
+        ),
+        None,
+    )
+
+
+def _build_detected_content(
+    entry,
+):
+    tracked_igdb_ids = set(
+        GameContent.objects.filter(
+            library_entry=entry,
+            igdb_id__isnull=False,
+        ).values_list(
+            "igdb_id",
+            flat=True,
+        )
+    )
+
+    detected_content = [
+        item
+        for item
+        in _iter_igdb_content_items(
+            entry.game
+        )
+        if (
+            item["igdb_id"]
+            not in tracked_igdb_ids
+        )
+    ]
+
+    detected_ids = [
+        item["igdb_id"]
+        for item in detected_content
+    ]
+
+    local_games = {
+        game.igdb_id: game
+        for game in Game.objects.filter(
+            igdb_id__in=detected_ids
+        )
+    }
+
+    for item in detected_content:
+        item["local_game"] = (
+            local_games.get(
+                item["igdb_id"]
+            )
+        )
+
+    content_order = {
+        GameContent.ContentType.DLC: 0,
+        GameContent.ContentType.EXPANSION: 1,
+        (
+            GameContent.ContentType
+            .STANDALONE_EXPANSION
+        ): 2,
+        GameContent.ContentType.OTHER: 3,
+    }
+
+    return sorted(
+        detected_content,
+        key=lambda item: (
+            content_order.get(
+                item["content_type"],
+                99,
+            ),
+            (
+                item["first_release_date"]
+                is None
+            ),
+            item["first_release_date"],
+            item["title"].casefold(),
+        ),
+    )
 
 
 def _detail_entries():
@@ -54,6 +284,20 @@ def _detail_entries():
                 ),
                 to_attr="detail_playthroughs",
             ),
+                        Prefetch(
+                "additional_contents",
+                queryset=(
+                    GameContent.objects
+                    .order_by(
+                        "content_type",
+                        "first_release_date",
+                        "title",
+                    )
+                ),
+                to_attr=(
+                    "detail_additional_contents"
+                ),
+            ),
         )
         .annotate(
             has_completed_history=Exists(
@@ -77,6 +321,10 @@ def _build_detail_context(
     new_playthrough_form=None,
     new_access_form=None,
     access_form=None,
+    new_content_form=None,
+    content_form=None,
+    detected_content_form=None,
+    detected_content_id=None,
     access_action_error=None,
     access_action_id=None,
 ):
@@ -168,6 +416,70 @@ def _build_detail_context(
                 prefix=f"access-{access.pk}",
             )
 
+    if new_content_form is None:
+        new_content_form = (
+            GameContentOwnerForm(
+                library_entry=entry,
+                prefix="new-content",
+            )
+        )
+
+    for content in (
+        entry.detail_additional_contents
+    ):
+        if (
+            content_form is not None
+            and content.pk
+            == content_form.instance.pk
+        ):
+            content.owner_form = content_form
+        else:
+            content.owner_form = (
+                GameContentOwnerForm(
+                    instance=content,
+                    library_entry=entry,
+                    prefix=(
+                        f"content-{content.pk}"
+                    ),
+                )
+            )
+
+    detected_contents = (
+        _build_detected_content(
+            entry
+        )
+    )
+
+    for detected_content in detected_contents:
+        igdb_id = detected_content[
+            "igdb_id"
+        ]
+
+        if (
+            detected_content_form
+            is not None
+            and detected_content_id
+            == igdb_id
+        ):
+            detected_content[
+                "track_form"
+            ] = detected_content_form
+        else:
+            detected_content[
+                "track_form"
+            ] = IGDBGameContentTrackForm(
+                prefix=(
+                    f"detected-content-"
+                    f"{igdb_id}"
+                ),
+                initial={
+                    "status": (
+                        GameContent.Status
+                        .PLAN_TO_PLAY
+                    ),
+                },
+            )
+
     return {
         "active_page": "library",
         "entry": entry,
@@ -178,8 +490,13 @@ def _build_detail_context(
         "owner_form": owner_form,
         "new_playthrough_form": new_playthrough_form,
         "new_access_form": new_access_form,
+        "new_content_form": new_content_form,
+        "detected_contents": detected_contents,
         "access_action_error": access_action_error,
         "access_action_id": access_action_id,
+        "tracked_content_count": len(
+            entry.detail_additional_contents
+        ),
     }
 
 
@@ -457,10 +774,264 @@ def delete_access(
             status=409,
         )
 
+
+    removes_last_owned_access = (
+        access.access_type
+        == GameAccess.AccessType.OWNED
+        and entry.has_platinum
+        and not GameAccess.objects.filter(
+            library_entry=entry,
+            access_type=(
+                GameAccess.AccessType.OWNED
+            ),
+        )
+        .exclude(
+            pk=access.pk
+        )
+        .exists()
+    )
+
+    if removes_last_owned_access:
+        return render(
+            request,
+            "games/detail.html",
+            _build_detail_context(
+                entry,
+                access_action_error=(
+                    "This access is the final Owned "
+                    "platform for a platinum-marked game. "
+                    "Remove the platinum mark or add "
+                    "another Owned access first."
+                ),
+                access_action_id=access.pk,
+            ),
+            status=409,
+        )
+
     access.delete()
 
     return redirect(
         entry.game.get_absolute_url()
     )
 
+
+@login_required
+@require_POST
+def create_manual_content(
+    request,
+    slug,
+):
+    entry = _get_detail_entry(slug)
+
+    form = GameContentOwnerForm(
+        request.POST,
+        library_entry=entry,
+        prefix="new-content",
+    )
+
+    if form.is_valid():
+        content = form.save(
+            commit=False
+        )
+
+        content.library_entry = entry
+        content.save()
+
+        return redirect(
+            entry.game.get_absolute_url()
+        )
+
+    return render(
+        request,
+        "games/detail.html",
+        _build_detail_context(
+            entry,
+            new_content_form=form,
+        ),
+    )
+
+
+@login_required
+@require_POST
+def track_igdb_content(
+    request,
+    slug,
+    igdb_content_id,
+):
+    entry = _get_detail_entry(slug)
+
+    detected_content = (
+        _find_igdb_content_item(
+            entry.game,
+            igdb_content_id,
+        )
+    )
+
+    if detected_content is None:
+        return HttpResponseBadRequest(
+            (
+                "This content is not related "
+                "to the selected local game."
+            )
+        )
+
+    if Game.objects.filter(
+        igdb_id=igdb_content_id
+    ).exists():
+        return HttpResponseBadRequest(
+            (
+                "This IGDB content is already "
+                "tracked as a separate game."
+            )
+        )
+
+    if GameContent.objects.filter(
+        igdb_id=igdb_content_id
+    ).exists():
+        return HttpResponseBadRequest(
+            (
+                "This IGDB content is already "
+                "tracked under another game."
+            )
+        )
+
+    form = IGDBGameContentTrackForm(
+        request.POST,
+        prefix=(
+            f"detected-content-"
+            f"{igdb_content_id}"
+        ),
+    )
+
+    if form.is_valid():
+        GameContent.objects.create(
+            library_entry=entry,
+            igdb_id=(
+                detected_content[
+                    "igdb_id"
+                ]
+            ),
+            title=(
+                detected_content[
+                    "title"
+                ]
+            ),
+            content_type=(
+                detected_content[
+                    "content_type"
+                ]
+            ),
+            status=(
+                form.cleaned_data[
+                    "status"
+                ]
+            ),
+            summary=(
+                detected_content[
+                    "summary"
+                ]
+            ),
+            cover_url=(
+                detected_content[
+                    "cover_url"
+                ]
+            ),
+            first_release_date=(
+                detected_content[
+                    "first_release_date"
+                ]
+            ),
+            completed_on=(
+                form.cleaned_data[
+                    "completed_on"
+                ]
+            ),
+            notes=(
+                form.cleaned_data[
+                    "notes"
+                ]
+            ),
+            igdb_payload=(
+                detected_content[
+                    "igdb_payload"
+                ]
+            ),
+        )
+
+        return redirect(
+            entry.game.get_absolute_url()
+        )
+
+    return render(
+        request,
+        "games/detail.html",
+        _build_detail_context(
+            entry,
+            detected_content_form=form,
+            detected_content_id=(
+                igdb_content_id
+            ),
+        ),
+    )
+
+
+@login_required
+@require_POST
+def update_content(
+    request,
+    slug,
+    content_id,
+):
+    entry = _get_detail_entry(slug)
+
+    content = get_object_or_404(
+        GameContent,
+        pk=content_id,
+        library_entry=entry,
+    )
+
+    form = GameContentOwnerForm(
+        request.POST,
+        instance=content,
+        library_entry=entry,
+        prefix=f"content-{content.pk}",
+    )
+
+    if form.is_valid():
+        form.save()
+
+        return redirect(
+            entry.game.get_absolute_url()
+        )
+
+    return render(
+        request,
+        "games/detail.html",
+        _build_detail_context(
+            entry,
+            content_form=form,
+        ),
+    )
+
+
+@login_required
+@require_POST
+def delete_content(
+    request,
+    slug,
+    content_id,
+):
+    entry = _get_detail_entry(slug)
+
+    content = get_object_or_404(
+        GameContent,
+        pk=content_id,
+        library_entry=entry,
+    )
+
+    content.delete()
+
+    return redirect(
+        entry.game.get_absolute_url()
+    )
 

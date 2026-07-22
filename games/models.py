@@ -116,10 +116,26 @@ class Game(models.Model):
             MinValueValidator(Decimal("0.01")),
         ],
     )
+    genres = models.JSONField(
+        default=list,
+        blank=True,
+    )
+
+    platforms = models.JSONField(
+        default=list,
+        blank=True,
+    )
+
     igdb_payload = models.JSONField(
         default=dict,
         blank=True,
     )
+
+    igdb_synced_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
     franchise = models.ForeignKey(
         Franchise,
         related_name="games",
@@ -254,6 +270,137 @@ class LibraryEntry(models.Model):
 
     def __str__(self):
         return f"{self.game.title} · {self.get_status_display() or 'Sin estado'}"
+
+
+class GameContent(models.Model):
+    class ContentType(models.TextChoices):
+        DLC = "dlc", "DLC"
+        EXPANSION = "expansion", "Expansion"
+        STANDALONE_EXPANSION = (
+            "standalone_expansion",
+            "Standalone Expansion",
+        )
+        OTHER = "other", "Other"
+
+    class Status(models.TextChoices):
+        PLAN_TO_PLAY = (
+            "plan_to_play",
+            "Plan to Play",
+        )
+        PLAYING = "playing", "Playing"
+        PAUSED = "paused", "Paused"
+        COMPLETED = "completed", "Completed"
+        DROPPED = "dropped", "Dropped"
+
+    library_entry = models.ForeignKey(
+        LibraryEntry,
+        related_name="additional_contents",
+        on_delete=models.CASCADE,
+    )
+
+    igdb_id = models.PositiveBigIntegerField(
+        unique=True,
+        null=True,
+        blank=True,
+    )
+
+    title = models.CharField(
+        max_length=255,
+    )
+
+    content_type = models.CharField(
+        max_length=30,
+        choices=ContentType.choices,
+        default=ContentType.DLC,
+        db_index=True,
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PLAN_TO_PLAY,
+        db_index=True,
+    )
+
+    summary = models.TextField(
+        blank=True,
+    )
+
+    cover_url = models.URLField(
+        max_length=500,
+        blank=True,
+    )
+
+    first_release_date = models.DateField(
+        null=True,
+        blank=True,
+    )
+
+    completed_on = models.DateField(
+        null=True,
+        blank=True,
+    )
+
+    notes = models.TextField(
+        blank=True,
+    )
+
+    igdb_payload = models.JSONField(
+        default=dict,
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = [
+            "title",
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "library_entry",
+                    "title",
+                ],
+                name="games_content_unique_title",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(completed_on__isnull=True)
+                    | Q(status="completed")
+                ),
+                name="games_content_completed_date_valid",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+
+        if (
+            self.completed_on
+            and self.status
+            != self.Status.COMPLETED
+        ):
+            raise ValidationError(
+                {
+                    "completed_on": (
+                        "A completion date can only be "
+                        "registered for completed content."
+                    ),
+                }
+            )
+
+    def __str__(self):
+        return (
+            f"{self.library_entry.game.title} · "
+            f"{self.title}"
+        )
 
 
 class GameAccess(models.Model):

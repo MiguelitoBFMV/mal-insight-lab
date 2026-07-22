@@ -16,6 +16,9 @@ DEBUG = os.getenv("DEBUG", "False") == "True"
 
 MAL_ACCESS_TOKEN = os.getenv("MAL_ACCESS_TOKEN")
 
+IGDB_CLIENT_ID = os.getenv("IGDB_CLIENT_ID")
+IGDB_CLIENT_SECRET = os.getenv("IGDB_CLIENT_SECRET")
+
 ALLOWED_HOSTS = [
     host.strip()
     for host in os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
