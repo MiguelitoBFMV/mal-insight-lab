@@ -1,5 +1,8 @@
 import requests
-from django.conf import settings
+
+from mal_data.services.mal_oauth import (
+    get_valid_access_token,
+)
 
 
 class MyAnimeListClient:
@@ -8,49 +11,72 @@ class MyAnimeListClient:
     ANIME_DETAIL_URL = "https://api.myanimelist.net/v2/anime/{anime_id}"
     ANIME_MY_LIST_STATUS_URL = "https://api.myanimelist.net/v2/anime/{anime_id}/my_list_status"
 
-    def __init__(self):
-        self.access_token = settings.MAL_ACCESS_TOKEN
+    def get_headers(self, *, force_refresh=False):
+        access_token = get_valid_access_token(
+            force_refresh=force_refresh,
+        )
 
-        if not self.access_token:
-            raise ValueError("MAL_ACCESS_TOKEN no está configurado en .env")
-
-    def get_headers(self):
         return {
-            "Authorization": f"Bearer {self.access_token}",
+            "Authorization": f"Bearer {access_token}",
         }
 
-    def fetch_page(self, url, params=None):
-        response = requests.get(
+
+    def _request(
+        self,
+        method,
+        url,
+        *,
+        params=None,
+        data=None,
+    ):
+        response = requests.request(
+            method,
             url,
             headers=self.get_headers(),
             params=params,
-            timeout=30,
-        )
-
-        if not response.ok:
-            raise Exception(
-                f"Error consultando MAL API. "
-                f"Status: {response.status_code}. Response: {response.text}"
-            )
-
-        return response.json()
-
-    def put_page(self, url, data=None):
-        response = requests.put(
-            url,
-            headers=self.get_headers(),
             data=data,
             timeout=30,
         )
 
+        if response.status_code == 401:
+            response = requests.request(
+                method,
+                url,
+                headers=self.get_headers(
+                    force_refresh=True,
+                ),
+                params=params,
+                data=data,
+                timeout=30,
+            )
+
         if not response.ok:
             raise Exception(
-                "Error actualizando MAL API.\n"
-                f"Status: {response.status_code}.\n"
+                "Error consultando MyAnimeList API. "
+                f"Status: {response.status_code}. "
                 f"Response: {response.text}"
             )
 
+        if not response.content:
+            return {}
+
         return response.json()
+
+
+    def fetch_page(self, url, params=None):
+        return self._request(
+            "GET",
+            url,
+            params=params,
+        )
+
+
+    def put_page(self, url, data=None):
+        return self._request(
+            "PUT",
+            url,
+            data=data,
+        )
     
     def fetch_all_anime_by_status(self, status):
         params = {
@@ -157,23 +183,18 @@ class MyAnimeListClient:
         return self.fetch_page(url, params=params)
     
     def fetch_anime_my_list_status(self, anime_id):
-        url = self.ANIME_MY_LIST_STATUS_URL.format(anime_id=anime_id)
-
-        response = requests.get(
-            url,
-            headers=self.get_headers(),
-            timeout=30,
+        url = self.ANIME_DETAIL_URL.format(
+            anime_id=anime_id,
         )
 
-        if response.status_code == 404:
-            return None
+        anime_data = self.fetch_page(
+            url,
+            params={
+                "fields": "my_list_status",
+            },
+        )
 
-        if not response.ok:
-            raise Exception(
-                f"MyAnimeList API error {response.status_code}: {response.text}"
-            )
-
-        return response.json()
+        return anime_data.get("my_list_status")
     
     def update_anime_my_list_status(
         self,

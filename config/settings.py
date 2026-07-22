@@ -14,6 +14,15 @@ SECRET_KEY = os.getenv("SECRET_KEY", "fallback-dev-key")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False") == "True"
 
+MAL_CLIENT_ID = os.getenv("MAL_CLIENT_ID")
+MAL_CLIENT_SECRET = os.getenv("MAL_CLIENT_SECRET")
+MAL_REDIRECT_URI = os.getenv(
+    "MAL_REDIRECT_URI",
+    "http://127.0.0.1:8000/anime/oauth/mal/callback/",
+)
+
+# Compatibilidad temporal con el token antiguo.
+# Después de conectar OAuth correctamente, podrá eliminarse del .env.
 MAL_ACCESS_TOKEN = os.getenv("MAL_ACCESS_TOKEN")
 
 IGDB_CLIENT_ID = os.getenv("IGDB_CLIENT_ID")

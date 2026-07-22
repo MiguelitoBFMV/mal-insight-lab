@@ -49,23 +49,30 @@
                 </div>
 
                 {% if user.is_authenticated %}
-                    <form
-                        method="post"
-                        action="{% url 'mal_insights:sync_anime_list' %}"
-                    >
-                        {% csrf_token %}
-
-                        <button
-                            class="primary-button sync-button"
-                            type="submit"
+                    <div class="sync-actions">
+                        <form
+                            method="post"
+                            action="{% url 'mal_insights:sync_anime_list' %}"
                         >
-                            Manual Resync
-                        </button>
-                    </form>
+                            {% csrf_token %}
+
+                            <button
+                                class="sync-action-button"
+                                type="submit"
+                            >
+                                Manual Resync
+                            </button>
+                        </form>
+
+                        <a
+                            class="sync-action-button sync-action-button-secondary"
+                            href="{% url 'mal_insights:mal_oauth_connect' %}"
+                        >
+                            Connect / Renew MAL
+                        </a>
+                    </div>
                 {% else %}
-                    <p class="read-only-notice">
-                        Login required for synchronization
-                    </p>
+                    <p>Login required for synchronization</p>
                 {% endif %}
             </div>
         </section>

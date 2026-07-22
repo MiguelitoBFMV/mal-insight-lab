@@ -6,6 +6,7 @@ from .web import seasonal as seasonal_views
 from .web import relations as relations_views
 from .web import sync as sync_views
 from .web import dashboard as dashboard_views
+from .web import oauth as oauth_views
 
 app_name = "mal_insights"
 
@@ -57,5 +58,15 @@ urlpatterns = [
         "seasonal/add-to-plan/",
         seasonal_views.add_seasonal_to_plan_view,
         name="add_seasonal_to_plan",
+    ),
+    path(
+    "oauth/mal/connect/",
+    oauth_views.mal_oauth_connect,
+    name="mal_oauth_connect",
+    ),
+    path(
+        "oauth/mal/callback/",
+        oauth_views.mal_oauth_callback,
+        name="mal_oauth_callback",
     ),
 ]

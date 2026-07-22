@@ -435,3 +435,20 @@ class SeasonalAnime(models.Model):
     @property
     def display_title(self):
         return self.title_english or self.title_romaji or self.title_native or f"AniList #{self.anilist_id}"
+
+class MALOAuthToken(models.Model):
+    access_token = models.TextField()
+    refresh_token = models.TextField()
+    token_type = models.CharField(max_length=30, default="Bearer")
+    expires_at = models.DateTimeField()
+
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def is_expired(self):
+        return self.expires_at <= timezone.now()
+
+    def __str__(self):
+        return f"MyAnimeList OAuth · expires {self.expires_at}"
+

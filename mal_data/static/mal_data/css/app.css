@@ -1664,3 +1664,60 @@ button.danger-button:hover {
     letter-spacing: 0.07em;
     text-transform: uppercase;
 }
+
+.sync-actions {
+    display: grid;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.sync-actions form {
+    width: 100%;
+    margin: 0;
+}
+
+.sync-action-button {
+    box-sizing: border-box;
+    display: flex;
+    width: 100%;
+    min-height: 38px;
+    align-items: center;
+    justify-content: center;
+
+    padding: 10px 12px;
+    border: 1px solid var(--red);
+    background: linear-gradient(
+        90deg,
+        var(--red),
+        var(--red-dark)
+    );
+    color: #ffffff;
+
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    line-height: 1.2;
+    text-align: center;
+    text-decoration: none;
+    text-transform: uppercase;
+
+    cursor: pointer;
+}
+
+.sync-action-button:hover,
+.sync-action-button:focus-visible {
+    filter: brightness(1.12);
+}
+
+.sync-action-button-secondary {
+    border-color: var(--blue);
+    background: rgba(169, 193, 255, 0.08);
+    color: var(--blue);
+}
+
+.sync-action-button-secondary:hover,
+.sync-action-button-secondary:focus-visible {
+    background: rgba(169, 193, 255, 0.16);
+    color: #ffffff;
+}
