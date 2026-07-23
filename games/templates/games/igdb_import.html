@@ -208,7 +208,7 @@
                     {% endif %}
 
                     {% for field in new_game_form %}
-                        {% if field.name == "has_platinum" %}
+                        {% if field.name == "has_platinum" or field.name == "is_platinum_target" %}
                             <div class="igdb-import-platinum-field">
                                 <label
                                     class="detail-owner-check"

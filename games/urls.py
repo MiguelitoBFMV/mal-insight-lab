@@ -4,6 +4,7 @@ from .web import dashboard as dashboard_views
 from .web import library as library_views
 from .web import detail as detail_views
 from .web import igdb as igdb_views
+from .web import platinum as platinum_views
 
 app_name = "games"
 
@@ -18,6 +19,11 @@ urlpatterns = [
         "library/",
         library_views.library,
         name="library",
+    ),
+    path(
+        "platinum/",
+        platinum_views.platinum,
+        name="platinum",
     ),
     path(
         "igdb/search/",

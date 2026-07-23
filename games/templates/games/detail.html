@@ -1,5 +1,7 @@
 {% extends "games/base.html" %}
 
+{% load i18n %}
+
 {% block title %}
     {{ game.title }}
 {% endblock %}
@@ -161,10 +163,24 @@
             <strong>
                 {% if entry.has_platinum %}
                     Unlocked
+                {% elif entry.is_platinum_target %}
+                    Target
                 {% else %}
                     Not Marked
                 {% endif %}
             </strong>
+
+            {% if entry.has_platinum and entry.platinum_earned_on %}
+                <small>
+                    {% language "en" %}
+                        {{ entry.platinum_earned_on|date:"M d, Y" }}
+                    {% endlanguage %}
+                </small>
+            {% elif entry.has_platinum %}
+                <small>Date unknown</small>
+            {% elif entry.is_platinum_target %}
+                <small>Future objective</small>
+            {% endif %}
         </article>
     </section>
 
@@ -293,6 +309,53 @@
                         </label>
 
                         {% for error in owner_form.has_platinum.errors %}
+                            <p class="detail-form-error">
+                                {{ error }}
+                            </p>
+                        {% endfor %}
+                    </div>
+
+                    <div class="detail-owner-field">
+                        <label
+                            for="{{ owner_form.platinum_earned_on.id_for_label }}"
+                        >
+                            {{ owner_form.platinum_earned_on.label }}
+                        </label>
+
+                        {{ owner_form.platinum_earned_on }}
+
+                        {% if owner_form.platinum_earned_on.help_text %}
+                            <small>
+                                {{ owner_form.platinum_earned_on.help_text }}
+                            </small>
+                        {% endif %}
+
+                        {% for error in owner_form.platinum_earned_on.errors %}
+                            <p class="detail-form-error">
+                                {{ error }}
+                            </p>
+                        {% endfor %}
+                    </div>
+
+                    <div class="detail-owner-field detail-owner-field--check">
+                        <label
+                            class="detail-owner-check"
+                            for="{{ owner_form.is_platinum_target.id_for_label }}"
+                        >
+                            {{ owner_form.is_platinum_target }}
+
+                            <span>
+                                {{ owner_form.is_platinum_target.label }}
+                            </span>
+                        </label>
+
+                        {% if owner_form.is_platinum_target.help_text %}
+                            <small>
+                                {{ owner_form.is_platinum_target.help_text }}
+                            </small>
+                        {% endif %}
+
+                        {% for error in owner_form.is_platinum_target.errors %}
                             <p class="detail-form-error">
                                 {{ error }}
                             </p>

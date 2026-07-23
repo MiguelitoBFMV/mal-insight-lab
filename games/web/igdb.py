@@ -292,20 +292,27 @@ def igdb_import(
                     entry = LibraryEntry.objects.create(
                         game=game,
                         status=(
-                            new_game_form
-                            .cleaned_data[
+                            new_game_form.cleaned_data[
                                 "status"
                             ]
                         ),
                         has_platinum=(
-                            new_game_form
-                            .cleaned_data[
+                            new_game_form.cleaned_data[
                                 "has_platinum"
                             ]
                         ),
+                        platinum_earned_on=(
+                            new_game_form.cleaned_data[
+                                "platinum_earned_on"
+                            ]
+                        ),
+                        is_platinum_target=(
+                            new_game_form.cleaned_data[
+                                "is_platinum_target"
+                            ]
+                        ),
                         notes=(
-                            new_game_form
-                            .cleaned_data[
+                            new_game_form.cleaned_data[
                                 "notes"
                             ]
                         ),

@@ -1,4 +1,10 @@
-from django.db.models import Exists, OuterRef, Prefetch, Q
+from django.db.models import (
+    Exists,
+    F,
+    OuterRef,
+    Prefetch,
+    Q,
+)
 from django.shortcuts import render
 
 from games.models import (
@@ -8,11 +14,13 @@ from games.models import (
 )
 
 
+
 def library(request):
     query = request.GET.get("q", "").strip()
     status = request.GET.get("status", "").strip()
     access_type = request.GET.get("access", "").strip()
     platform = request.GET.get("platform", "").strip()
+    platinum = request.GET.get("platinum", "").strip()
 
     completed_playthroughs = Playthrough.objects.filter(
         library_entry=OuterRef("pk"),
@@ -96,9 +104,30 @@ def library(request):
             accesses__platform_name=platform
         )
 
-    entries = entries.distinct().order_by(
-        "game__title"
-    )
+    if platinum == "unlocked":
+        entries = entries.filter(
+            has_platinum=True,
+        )
+    elif platinum == "target":
+        entries = entries.filter(
+            is_platinum_target=True,
+        )
+
+    entries = entries.distinct()
+
+    if platinum == "unlocked":
+        entries = entries.order_by(
+            F(
+                "platinum_earned_on"
+            ).desc(
+                nulls_last=True
+            ),
+            "game__title",
+        )
+    else:
+        entries = entries.order_by(
+            "game__title"
+        )
 
     context = {
         "active_page": "library",
@@ -110,6 +139,7 @@ def library(request):
         "selected_status": status,
         "selected_access": access_type,
         "selected_platform": platform,
+        "selected_platinum": platinum,
         "status_choices": LibraryEntry.Status.choices,
         "access_choices": GameAccess.AccessType.choices,
         "platform_choices": GameAccess.Platform.choices,
@@ -120,3 +150,4 @@ def library(request):
         "games/library.html",
         context,
     )
+

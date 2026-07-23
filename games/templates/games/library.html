@@ -130,6 +130,37 @@
                 </select>
             </div>
 
+            <div class="filter-field">
+                <label for="library-platinum">
+                    Platinum
+                </label>
+
+                <select
+                    id="library-platinum"
+                    name="platinum"
+                >
+                    <option value="">All</option>
+
+                    <option
+                        value="unlocked"
+                        {% if selected_platinum == "unlocked" %}
+                            selected
+                        {% endif %}
+                    >
+                        Platinum Unlocked
+                    </option>
+
+                    <option
+                        value="target"
+                        {% if selected_platinum == "target" %}
+                            selected
+                        {% endif %}
+                    >
+                        Platinum Target
+                    </option>
+                </select>
+            </div>
+
             <div class="filter-actions">
                 <button type="submit">
                     Apply Filters
@@ -175,8 +206,21 @@
                         {% endif %}
 
                         {% if entry.has_platinum %}
-                            <span class="platinum-badge">
+                            <span
+                                class="platinum-badge"
+                                title="Platinum Unlocked"
+                            >
                                 🏆
+                            </span>
+                        {% elif entry.is_platinum_target %}
+                            <span
+                                class="
+                                    platinum-badge
+                                    platinum-badge--target
+                                "
+                                title="Platinum Target"
+                            >
+                                🎯
                             </span>
                         {% endif %}
                     </div>

@@ -613,6 +613,11 @@ button {
     background: rgba(15, 23, 42, 0.88);
 }
 
+.platinum-badge--target {
+    border: 1px solid rgba(248, 113, 113, 0.42);
+    background: rgba(69, 10, 10, 0.9);
+}
+
 .library-card-copy {
     padding: 15px;
 }
@@ -777,7 +782,7 @@ button {
     display: grid;
     grid-template-columns:
         minmax(220px, 1.8fr)
-        repeat(3, minmax(140px, 1fr))
+        repeat(4, minmax(140px, 1fr))
         auto;
     align-items: end;
     gap: 12px;
@@ -2903,3 +2908,373 @@ button {
         width: 100%;
     }
 }
+
+.metric-card--link {
+    color: inherit;
+    text-decoration: none;
+    transition:
+        border-color 160ms ease,
+        background-color 160ms ease,
+        transform 160ms ease;
+}
+
+.metric-card--link:hover {
+    border-color: rgba(248, 113, 113, 0.5);
+    background-color: rgba(127, 29, 29, 0.14);
+    transform: translateY(-2px);
+}
+
+.metric-card--link:focus-visible {
+    border-color: var(--red);
+    outline: 3px solid rgba(239, 68, 68, 0.2);
+    outline-offset: 3px;
+}
+
+.platinum-page-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 40px;
+    padding: 48px 0 32px;
+}
+
+.platinum-page-header h1 {
+    margin: 8px 0 0;
+    font-size: clamp(2.5rem, 6vw, 5rem);
+    letter-spacing: -0.055em;
+}
+
+.platinum-page-header p:not(.dashboard-eyebrow) {
+    max-width: 680px;
+    margin: 17px 0 0;
+    color: var(--muted);
+    line-height: 1.7;
+}
+
+.platinum-total-card {
+    display: grid;
+    min-width: 210px;
+    gap: 5px;
+    padding: 18px;
+    border: 1px solid rgba(250, 204, 21, 0.34);
+    border-radius: 16px;
+    background: rgba(66, 32, 6, 0.24);
+}
+
+.platinum-total-card span,
+.platinum-total-card small {
+    color: var(--muted);
+    font-size: 0.7rem;
+}
+
+.platinum-total-card strong {
+    color: #fef08a;
+    font-size: 2rem;
+}
+
+.latest-platinum-panel {
+    display: grid;
+    grid-template-columns: 190px minmax(0, 1fr);
+    overflow: hidden;
+    border: 1px solid rgba(250, 204, 21, 0.34);
+    border-radius: 18px;
+    background:
+        linear-gradient(
+            120deg,
+            rgba(113, 63, 18, 0.25),
+            transparent 58%
+        ),
+        var(--surface);
+}
+
+.latest-platinum-cover {
+    position: relative;
+    display: grid;
+    min-height: 270px;
+    overflow: hidden;
+    place-items: center;
+    color: #fef08a;
+    background: #1c1408;
+    font-size: 1.5rem;
+    font-weight: 900;
+}
+
+.latest-platinum-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.latest-platinum-copy {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 28px;
+}
+
+.latest-platinum-copy h2 {
+    margin: 8px 0 0;
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    letter-spacing: -0.045em;
+}
+
+.latest-platinum-copy > span {
+    margin-top: 7px;
+    color: var(--muted);
+    font-size: 0.75rem;
+}
+
+.latest-platinum-copy > strong {
+    margin-top: 18px;
+    color: #fef08a;
+    font-size: 0.9rem;
+}
+
+.latest-platinum-copy .detail-secondary-action {
+    margin-top: 22px;
+}
+
+.platinum-history-panel,
+.undated-platinum-panel,
+.platinum-target-panel {
+    margin-top: 18px;
+}
+
+.platinum-year-list {
+    display: grid;
+    gap: 26px;
+    margin-top: 22px;
+}
+
+.platinum-year-group > header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+.platinum-year-group > header strong {
+    color: #fef08a;
+    font-size: 1.4rem;
+}
+
+.platinum-year-group > header span {
+    color: var(--muted);
+    font-size: 0.7rem;
+}
+
+.platinum-card-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 14px;
+}
+
+.platinum-game-card {
+    display: grid;
+    grid-template-columns: 105px minmax(0, 1fr);
+    min-height: 175px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface-soft);
+    transition:
+        border-color 160ms ease,
+        transform 160ms ease;
+}
+
+.platinum-game-card:hover {
+    border-color: rgba(250, 204, 21, 0.45);
+    transform: translateY(-2px);
+}
+
+.platinum-game-cover {
+    position: relative;
+    display: grid;
+    overflow: hidden;
+    place-items: center;
+    color: #fef08a;
+    background: #1c1408;
+    font-weight: 900;
+}
+
+.platinum-game-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.platinum-game-trophy {
+    position: absolute;
+    right: 7px;
+    bottom: 7px;
+    display: grid;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    border: 1px solid rgba(250, 204, 21, 0.42);
+    border-radius: 50%;
+    background: rgba(28, 20, 8, 0.9);
+}
+
+.platinum-game-copy {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    padding: 15px;
+}
+
+.platinum-game-copy p,
+.platinum-target-card p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.64rem;
+    text-transform: uppercase;
+}
+
+.platinum-game-copy h3,
+.platinum-target-card h3,
+.platinum-compact-card h3 {
+    margin: 7px 0 0;
+    font-size: 0.92rem;
+}
+
+.platinum-game-copy time {
+    margin-top: 12px;
+    color: #fde68a;
+    font-size: 0.7rem;
+    font-weight: 800;
+}
+
+.platinum-section-intro {
+    margin: 15px 0 0;
+    color: var(--muted);
+    font-size: 0.74rem;
+    line-height: 1.6;
+}
+
+.platinum-compact-grid,
+.platinum-target-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.platinum-compact-card {
+    display: grid;
+    grid-template-columns: 62px minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface-soft);
+}
+
+.platinum-compact-cover {
+    display: grid;
+    width: 62px;
+    height: 62px;
+    overflow: hidden;
+    place-items: center;
+    border-radius: 9px;
+    color: #fef08a;
+    background: #1c1408;
+    font-size: 0.7rem;
+    font-weight: 900;
+}
+
+.platinum-compact-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.platinum-compact-card span {
+    display: block;
+    margin-top: 5px;
+    color: var(--muted);
+    font-size: 0.66rem;
+}
+
+.platinum-target-card {
+    display: grid;
+    grid-template-columns: 82px minmax(0, 1fr);
+    min-height: 130px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    background: var(--surface-soft);
+}
+
+.platinum-target-cover {
+    display: grid;
+    overflow: hidden;
+    place-items: center;
+    color: #fecaca;
+    background: #210e17;
+    font-weight: 900;
+}
+
+.platinum-target-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.platinum-target-card > div:last-child {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    padding: 14px;
+}
+
+.platinum-target-card > div:last-child > span {
+    margin-top: 9px;
+    color: #fca5a5;
+    font-size: 0.68rem;
+    font-weight: 800;
+}
+
+@media (max-width: 1100px) {
+    .platinum-card-grid,
+    .platinum-compact-grid,
+    .platinum-target-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 680px) {
+    .platinum-page-header {
+        grid-template-columns: 1fr;
+    }
+
+    .platinum-total-card {
+        min-width: 0;
+    }
+
+    .latest-platinum-panel {
+        grid-template-columns: 120px minmax(0, 1fr);
+    }
+
+    .platinum-card-grid,
+    .platinum-compact-grid,
+    .platinum-target-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .platinum-game-card {
+        grid-template-columns: 90px minmax(0, 1fr);
+    }
+}
+
