@@ -28,7 +28,7 @@ The application currently runs locally and uses Supabase PostgreSQL as its share
 
 The anime side of MAL Insights is functionally stable and includes automatic MyAnimeList OAuth renewal, optimized synchronization workflows, manual rescue support for entries omitted by the MAL list API, and unified Episode Signals for normal and manually rescued entries.
 
-Game Kiroku includes an explicit local-first IGDB import workflow and additional-content tracking for DLC and expansions.
+Game Kiroku now includes its local-first IGDB workflow, additional-content tracking, a dedicated Platinum Collection, and public franchise views with authenticated owner management. Its MVP is nearing completion, with competitive-rank tracking and final hardening remaining.
 
 The platform supports two access levels:
 
@@ -85,29 +85,43 @@ Route:
 
 ### Game Kiroku / ゲーム記録
 
-Status: **Available — active development**
+Status: **Available — MVP nearing completion**
 
-Game Kiroku is the video game library, playthrough, access, and additional-content tracking module.
+Game Kiroku is the video game library, playthrough, access, platinum, franchise, and additional-content tracking module.
 
 Current features include:
 
 - Local game library stored in Supabase PostgreSQL.
-- Dynamic dashboard with owned, wishlist, completed, platinum, Plan to Play, and multiplayer metrics.
+- Dynamic dashboard with Owned, Wishlist, Completed, Platinum, Plan to Play, and Multiplayer metrics.
 - Replay-aware completion analytics.
 - Completion analytics that exclude persistent multiplayer games.
-- Public library with title, franchise, status, access, and platform filters.
+- Public library with search and filters for status, access type, platform, Platinum Unlocked, and Platinum Target.
+- Platinum-filtered ordering by acquisition date, with unknown dates placed last.
 - Rich individual game detail pages.
-- Playing, paused, dropped, completed, Plan to Play, and multiplayer states.
+- Playing, Paused, Dropped, Completed, Plan to Play, and Multiplayer states.
 - Manual status control for games without playthrough history.
-- Playthrough-driven status synchronization when history exists.
+- Playthrough-driven status synchronization when playthrough history exists.
 - Multiple playthroughs per game.
 - Text language, platform access, progress, dates, notes, and hours per playthrough.
-- Owned and wishlist access records by platform and storefront.
+- Owned and Wishlist access records by platform and storefront.
 - Owner controls for creating, editing, and deleting eligible access records.
-- Manual franchise grouping.
+- Historical protection for accesses already referenced by playthroughs.
 - Main-story duration from IGDB with manual override support.
-- Platinum indicator at library-entry level.
-- Owner-only forms for library entries, accesses, playthroughs, and additional content.
+- Platinum tracking at `LibraryEntry` level, independent of the current platform.
+- Optional platinum acquisition dates.
+- Platinum targets for future goals.
+- Dedicated Platinum Collection with the latest platinum, yearly history, unknown-date records, and future targets.
+- Manual franchise grouping.
+- Public franchise list and franchise detail pages.
+- Franchise metrics for total, owned, active, Plan to Play, completed, and platinum games.
+- Release timelines that can be ordered oldest-first or newest-first.
+- Optional franchise logos.
+- Dynamic franchise artwork selected from the most relevant library game.
+- Representative-game priority of Playing, Completed, Paused, Multiplayer, Plan to Play, and Dropped.
+- Owner controls for creating, editing, and safely deleting empty franchises.
+- Assignment, movement, and removal of games from franchises without using Django admin.
+- Optional franchise assignment during IGDB import.
+- Owner-only forms for library entries, franchises, accesses, playthroughs, and additional content.
 - Explicit IGDB search, review, import, linking, and refresh actions.
 - Local-first storage of imported IGDB metadata.
 - Exact-title-first IGDB search ranking with bundles and secondary editions deprioritized.
@@ -115,12 +129,12 @@ Current features include:
 - Linking IGDB metadata to existing local games without replacing their slug, accesses, playthroughs, notes, or status.
 - Creating a new `Game`, `LibraryEntry`, and initial `GameAccess` in one transactional import.
 - Validation that prevents a platinum-marked entry from existing without at least one Owned access.
-- Additional Content records for DLC, expansions, standalone expansions, and manual related content.
+- Additional Content records for DLC, expansions, standalone expansions, and manually registered related content.
 - IGDB detection of `dlcs`, `expansions`, `standalone_expansions`, and `parent_game` relationships.
 - Choice to track detected content under its parent game or review it as a separate library game.
 - Status, optional completion date, notes, synopsis, cover, release date, and raw IGDB payload for tracked additional content.
 - Public read-only mode and owner-only write actions.
-- Automated model, route, permission, dashboard, library, detail, playthrough, and access tests.
+- Automated model, route, permission, dashboard, library, detail, platinum, franchise, playthrough, access, and form tests.
 
 IGDB is treated as an import and enrichment source. Normal Game Kiroku pages read from Supabase and do not contact IGDB automatically. Search, import, linking, and refresh operations happen only after an explicit owner action.
 
@@ -130,6 +144,9 @@ Routes:
 /games/                               Dashboard
 /games/library/                       Library
 /games/library/<slug>/                Game detail
+/games/platinum/                      Platinum Collection
+/games/franchises/                    Franchise list
+/games/franchises/<slug>/             Franchise detail
 /games/igdb/search/                   Owner IGDB search
 /games/igdb/<igdb_id>/import/         Owner import review
 ```
@@ -227,6 +244,9 @@ Planned route:
 /games/                            Game Kiroku dashboard
 /games/library/                    Game Kiroku library
 /games/library/<slug>/             Game Kiroku game detail
+/games/platinum/                   Game Kiroku Platinum Collection
+/games/franchises/                 Game Kiroku franchise list
+/games/franchises/<slug>/          Game Kiroku franchise detail
 /games/igdb/search/                Owner-only IGDB search
 /games/igdb/<igdb_id>/import/      Owner-only IGDB import review
 /watchroom/                        Watchroom — planned
@@ -301,14 +321,19 @@ mvs-tracker/
 │   │   ├── base.html
 │   │   ├── dashboard.html
 │   │   ├── detail.html
+│   │   ├── franchise_detail.html
+│   │   ├── franchise_list.html
 │   │   ├── igdb_import.html
 │   │   ├── igdb_search.html
-│   │   └── library.html
+│   │   ├── library.html
+│   │   └── platinum.html
 │   ├── web/
 │   │   ├── dashboard.py
 │   │   ├── detail.py
+│   │   ├── franchise.py
 │   │   ├── igdb.py
-│   │   └── library.py
+│   │   ├── library.py
+│   │   └── platinum.py
 │   ├── admin.py
 │   ├── apps.py
 │   ├── forms.py
@@ -451,12 +476,17 @@ After the initial rescue, normal progress updates for active rescued anime are h
 MVS Tracker uses an isolated SQLite in-memory database for automated tests.
 
 ```bash
-python manage.py test   core   mal_data   games   --settings=config.test_settings   --verbosity=2
+python manage.py test \
+  core \
+  mal_data \
+  games \
+  --settings=config.test_settings \
+  --verbosity=2
 ```
 
 The test database is created and destroyed automatically. It does not modify Supabase.
 
-At the current project checkpoint, the automated suite contains **96 passing tests**.
+At the current project checkpoint, the automated suite contains **126 passing tests**.
 
 The MAL Insights regression suite covers:
 
@@ -468,6 +498,17 @@ The MAL Insights regression suite covers:
 - Watching, Rewatching, and manual-rescue Episode Signal selection.
 - Progress synchronization and Command Log generation.
 - Manual rescue synchronization from real MAL progress.
+
+The Game Kiroku regression suite covers:
+
+- Public routes and owner-only write actions.
+- Dashboard, library, detail, Platinum Collection, and franchise views.
+- Platinum dates, targets, filters, ordering, and model validation.
+- Franchise visibility, creation, editing, safe deletion, assignment, movement, removal, and timeline ordering.
+- Library-entry and playthrough state synchronization.
+- Playthrough creation, editing, transitions, numbering, dates, and access validation.
+- Access creation, editing, duplicate prevention, historical locking, and safe deletion.
+- IGDB import-form validation and franchise selection.
 
 ## Data Sources
 
@@ -540,6 +581,9 @@ Planned primary listening-data source for the music module. Music will be the fi
 - [x] Build the searchable and filterable library.
 - [x] Add wishlist and access modeling.
 - [x] Add platinum tracking at library-entry level.
+- [x] Add platinum acquisition dates and Platinum Targets.
+- [x] Add the dedicated Platinum Collection.
+- [x] Add Platinum Unlocked and Platinum Target library filters.
 - [x] Add replay-aware completion analytics.
 - [x] Add the individual game detail page.
 - [x] Add owner editing controls.
@@ -551,11 +595,15 @@ Planned primary listening-data source for the music module. Music will be the fi
 - [x] Allow related content to be tracked under a game or imported separately.
 - [x] Add manual additional-content records.
 - [x] Protect platinum entries from losing their final Owned access.
-- [ ] Add platinum acquisition dates and a dedicated Platinum History view.
-- [ ] Add a Platinum-only library filter.
-- [ ] Add franchise views.
+- [x] Add public franchise list and detail views.
+- [x] Add franchise logos and dynamic representative artwork.
+- [x] Add franchise creation, editing, safe deletion, and game assignment.
+- [x] Add reversible franchise release-timeline ordering.
 - [ ] Add manual competitive-rank tracking per game and mode.
-- [ ] Expand game analytics.
+- [ ] Add safe deletion for complete library entries.
+- [ ] Complete the final responsive, empty-state, navigation, and documentation review.
+- [ ] Mark the Game Kiroku MVP as complete.
+- [ ] Expand game analytics after the MVP.
 - [ ] Connect Game Kiroku activity to Hibi Log.
 
 ### Watchroom
