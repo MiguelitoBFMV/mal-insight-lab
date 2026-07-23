@@ -1,6 +1,7 @@
 from django import forms
 
 from games.models import (
+    Franchise,
     Game,
     GameAccess,
     GameContent,
@@ -19,6 +20,94 @@ MANUAL_LIBRARY_STATUS_CHOICES = tuple(
         LibraryEntry.Status.PAUSED,
     }
 )
+
+class FranchiseOwnerForm(forms.ModelForm):
+    class Meta:
+        model = Franchise
+        fields = (
+            "name",
+            "description",
+            "logo_url",
+        )
+        labels = {
+            "name": "Franchise Name",
+            "description": "Description",
+            "logo_url": "Logo URL",
+        }
+        widgets = {
+            "name": forms.TextInput(
+                attrs={
+                    "class": "detail-owner-control",
+                    "placeholder": (
+                        "Yakuza / Like a Dragon"
+                    ),
+                }
+            ),
+            "description": forms.Textarea(
+                attrs={
+                    "class": (
+                        "detail-owner-control "
+                        "detail-owner-textarea"
+                    ),
+                    "rows": 3,
+                    "placeholder": (
+                        "Optional description of the "
+                        "series..."
+                    ),
+                }
+            ),
+            "logo_url": forms.URLInput(
+                attrs={
+                    "class": "detail-owner-control",
+                    "placeholder": (
+                        "https://.../franchise-logo.png"
+                    ),
+                }
+            ),
+        }
+
+
+class GameFranchiseOwnerForm(forms.ModelForm):
+    franchise = forms.ModelChoiceField(
+        queryset=Franchise.objects.none(),
+        required=False,
+        empty_label="No Franchise",
+        label="Franchise",
+        widget=forms.Select(
+            attrs={
+                "class": "detail-owner-control",
+            }
+        ),
+    )
+
+    class Meta:
+        model = Game
+        fields = (
+            "franchise",
+        )
+
+    def __init__(
+        self,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(
+            *args,
+            **kwargs,
+        )
+
+        self.fields["franchise"].queryset = (
+            Franchise.objects.order_by(
+                "display_order",
+                "name",
+            )
+        )
+
+        self.fields["franchise"].help_text = (
+            "Select No Franchise to remove this "
+            "game from its current series."
+        )
+
 
 class LibraryEntryOwnerForm(forms.ModelForm):
     class Meta:
@@ -849,6 +938,18 @@ class IGDBNewGameImportForm(forms.Form):
         ),
     )
 
+    franchise = forms.ModelChoiceField(
+        queryset=Franchise.objects.none(),
+        required=False,
+        empty_label="No Franchise",
+        label="Franchise",
+        widget=forms.Select(
+            attrs={
+                "class": "detail-owner-control",
+            }
+        ),
+    )
+
     has_platinum = forms.BooleanField(
         required=False,
         label="Platinum Unlocked",
@@ -935,6 +1036,28 @@ class IGDBNewGameImportForm(forms.Form):
             }
         ),
     )
+
+    def __init__(
+        self,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(
+            *args,
+            **kwargs,
+        )
+
+        self.fields["franchise"].queryset = (
+            Franchise.objects.order_by(
+                "display_order",
+                "name",
+            )
+        )
+
+        self.fields["franchise"].help_text = (
+            "Optional. The game can be assigned "
+            "to a franchise immediately."
+        )
 
     def clean(self):
         cleaned_data = super().clean()

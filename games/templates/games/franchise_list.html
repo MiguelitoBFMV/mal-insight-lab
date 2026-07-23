@@ -1,0 +1,249 @@
+{% extends "games/base.html" %}
+
+{% block title %}
+    Franchises
+{% endblock %}
+
+{% block module_name %}
+    Franchises · Game Kiroku
+{% endblock %}
+
+{% block content %}
+    <header class="franchise-page-header">
+        <div>
+            <p class="dashboard-eyebrow">
+                Connected Game Series
+            </p>
+
+            <h1>Franchises</h1>
+
+            <p>
+                Browse connected games as complete series,
+                ordered around your personal library progress.
+            </p>
+        </div>
+
+        <aside class="franchise-summary-card">
+            <span>Franchises</span>
+            <strong>{{ franchise_count }}</strong>
+            <small>
+                {{ total_grouped_games }} grouped games
+            </small>
+        </aside>
+    </header>
+
+    {% if owner_form %}
+        <section class="franchise-owner-panel">
+            <details
+                {% if owner_form.errors %}
+                    open
+                {% endif %}
+            >
+                <summary>
+                    <span>Owner Controls</span>
+                    <strong>＋ Add Franchise</strong>
+                </summary>
+
+                <form
+                    method="post"
+                    action="{% url 'games:create_franchise' %}"
+                    class="franchise-create-form"
+                >
+                    {% csrf_token %}
+
+                    {% if owner_form.non_field_errors %}
+                        <div class="detail-form-error">
+                            {{ owner_form.non_field_errors }}
+                        </div>
+                    {% endif %}
+
+                    <div class="detail-owner-field">
+                        <label
+                            for="{{ owner_form.name.id_for_label }}"
+                        >
+                            {{ owner_form.name.label }}
+                        </label>
+
+                        {{ owner_form.name }}
+
+                        {% for error in owner_form.name.errors %}
+                            <p class="detail-form-error">
+                                {{ error }}
+                            </p>
+                        {% endfor %}
+                    </div>
+
+                    <div class="detail-owner-field">
+                        <label
+                            for="{{ owner_form.logo_url.id_for_label }}"
+                        >
+                            {{ owner_form.logo_url.label }}
+                        </label>
+
+                        {{ owner_form.logo_url }}
+
+                        <small>
+                            Optional transparent logo or
+                            representative series image.
+                        </small>
+
+                        {% for error in owner_form.logo_url.errors %}
+                            <p class="detail-form-error">
+                                {{ error }}
+                            </p>
+                        {% endfor %}
+                    </div>
+
+                    <div
+                        class="
+                            detail-owner-field
+                            franchise-description-field
+                        "
+                    >
+                        <label
+                            for="{{ owner_form.description.id_for_label }}"
+                        >
+                            {{ owner_form.description.label }}
+                        </label>
+
+                        {{ owner_form.description }}
+
+                        {% for error in owner_form.description.errors %}
+                            <p class="detail-form-error">
+                                {{ error }}
+                            </p>
+                        {% endfor %}
+                    </div>
+
+                    <div class="franchise-create-actions">
+                        <button
+                            type="submit"
+                            class="detail-primary-action"
+                        >
+                            Create Franchise
+                        </button>
+                    </div>
+                </form>
+            </details>
+        </section>
+    {% endif %}
+
+    <section
+        class="franchise-grid"
+        aria-label="Game franchises"
+    >
+        {% for franchise in franchises %}
+            <a
+                class="franchise-card"
+                href="{{ franchise.get_absolute_url }}"
+            >
+
+                <div class="franchise-card-visual">
+                    {% if franchise.representative_image_url %}
+                        <img
+                            class="franchise-card-background"
+                            src="{{ franchise.representative_image_url }}"
+                            alt=""
+                        >
+                    {% endif %}
+
+                    <div class="franchise-card-visual-overlay">
+                        {% if franchise.logo_url %}
+                            <img
+                                class="franchise-card-logo"
+                                src="{{ franchise.logo_url }}"
+                                alt="{{ franchise.name }} logo"
+                            >
+                        {% else %}
+                            <strong class="franchise-card-wordmark">
+                                {{ franchise.name }}
+                            </strong>
+                        {% endif %}
+
+                        {% if franchise.representative_game %}
+                            <span>
+                                {{ franchise.representative_label }}
+                                ·
+                                {{ franchise.representative_game.title }}
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="franchise-card-body">
+                    <header>
+                        <div>
+                            <p>Game Series</p>
+                            <h2>{{ franchise.name }}</h2>
+                        </div>
+
+                        <span>
+                            {{ franchise.game_count }}
+                        </span>
+                    </header>
+
+                    {% if franchise.description %}
+                        <p class="franchise-card-description">
+                            {{ franchise.description|truncatechars:180 }}
+                        </p>
+                    {% else %}
+                        <p class="franchise-card-description">
+                            A manually organized collection of
+                            connected games.
+                        </p>
+                    {% endif %}
+
+                    <div class="franchise-card-progress">
+                        <div>
+                            <span>Series Completion</span>
+                            <strong>
+                                {{ franchise.completion_percent }}%
+                            </strong>
+                        </div>
+
+                        <div
+                            class="franchise-progress-track"
+                            aria-label="
+                                {{ franchise.completion_percent }}
+                                percent completed
+                            "
+                        >
+                            <span
+                                style="
+                                    width:
+                                    {{ franchise.completion_percent }}%;
+                                "
+                            ></span>
+                        </div>
+                    </div>
+
+                    <dl class="franchise-card-stats">
+                        <div>
+                            <dt>Owned</dt>
+                            <dd>{{ franchise.owned_count }}</dd>
+                        </div>
+
+                        <div>
+                            <dt>Completed</dt>
+                            <dd>{{ franchise.completed_count }}</dd>
+                        </div>
+
+                        <div>
+                            <dt>Platinum</dt>
+                            <dd>{{ franchise.platinum_count }}</dd>
+                        </div>
+                    </dl>
+                </div>
+            </a>
+        {% empty %}
+            <p class="empty-state">
+                No games have been grouped into franchises yet.
+            </p>
+        {% endfor %}
+    </section>
+
+    <footer class="game-footer">
+        <span>Game Kiroku · Franchises</span>
+        <span>{{ total_grouped_games }} grouped games</span>
+    </footer>
+{% endblock %}

@@ -111,7 +111,11 @@
 
             <strong>
                 {% if game.franchise %}
-                    {{ game.franchise.name }}
+                    <a
+                        href="{{ game.franchise.get_absolute_url }}"
+                    >
+                        {{ game.franchise.name }}
+                    </a>
                 {% else %}
                     No Franchise
                 {% endif %}
@@ -382,6 +386,83 @@
                         </button>
                     </div>
                 </form>
+            </details>
+            
+            <details
+                class="detail-owner-editor"
+                {% if franchise_form.errors %}
+                    open
+                {% endif %}
+            >
+                <summary>
+                    Manage Franchise
+                </summary>
+
+                <form
+                    method="post"
+                    action="{% url 'games:update_game_franchise' game.slug %}"
+                    class="detail-owner-form"
+                >
+                    {% csrf_token %}
+
+                    {% if franchise_form.non_field_errors %}
+                        <div
+                            class="
+                                detail-form-error
+                                detail-form-error--wide
+                            "
+                        >
+                            {% for error in franchise_form.non_field_errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="detail-owner-field">
+                        <label
+                            for="{{ franchise_form.franchise.id_for_label }}"
+                        >
+                            {{ franchise_form.franchise.label }}
+                        </label>
+
+                        {{ franchise_form.franchise }}
+
+                        {% if franchise_form.franchise.help_text %}
+                            <small>
+                                {{ franchise_form.franchise.help_text }}
+                            </small>
+                        {% endif %}
+
+                        {% for error in franchise_form.franchise.errors %}
+                            <p class="detail-form-error">
+                                {{ error }}
+                            </p>
+                        {% endfor %}
+                    </div>
+
+                    <div class="detail-owner-actions">
+                        <button type="submit">
+                            Save Franchise Assignment
+                        </button>
+                    </div>
+                </form>
+
+                <nav
+                    class="game-franchise-owner-links"
+                    aria-label="Franchise management"
+                >
+                    {% if game.franchise %}
+                        <a
+                            href="{{ game.franchise.get_absolute_url }}"
+                        >
+                            Open {{ game.franchise.name }}
+                        </a>
+                    {% endif %}
+
+                    <a href="{% url 'games:franchise_list' %}">
+                        Manage Franchises
+                    </a>
+                </nav>
             </details>
 
             {% if request.GET.igdb_refresh == "success" %}

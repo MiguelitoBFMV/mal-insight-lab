@@ -289,6 +289,20 @@ def igdb_import(
                             game.get_absolute_url()
                         )
 
+                    selected_franchise = (
+                        new_game_form.cleaned_data[
+                            "franchise"
+                        ]
+                    )
+
+                    if selected_franchise is not None:
+                        game.franchise = selected_franchise
+                        game.save(
+                            update_fields=[
+                                "franchise",
+                            ]
+                        )
+
                     entry = LibraryEntry.objects.create(
                         game=game,
                         status=(

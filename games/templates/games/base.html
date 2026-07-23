@@ -112,10 +112,18 @@
                     Wishlist
                 </a>
 
-                <span class="sidebar-link sidebar-link--disabled">
+                <a
+                    class="
+                        sidebar-link
+                        {% if active_page == 'franchises' %}
+                            sidebar-link--active
+                        {% endif %}
+                    "
+                    href="{% url 'games:franchise_list' %}"
+                >
                     <span aria-hidden="true">◈</span>
                     Franchises
-                </span>
+                </a>
 
                 <a
                     class="sidebar-link
