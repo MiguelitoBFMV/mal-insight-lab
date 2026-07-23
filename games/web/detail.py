@@ -10,6 +10,7 @@ from django.http import HttpResponseBadRequest
 from games.forms import (
     GameAccessOwnerForm,
     GameContentOwnerForm,
+    GameFranchiseOwnerForm,
     IGDBGameContentTrackForm,
     LibraryEntryOwnerForm,
     NewPlaythroughForm,
@@ -317,6 +318,7 @@ def _get_detail_entry(slug):
 def _build_detail_context(
     entry,
     owner_form=None,
+    franchise_form=None,
     playthrough_form=None,
     new_playthrough_form=None,
     new_access_form=None,
@@ -375,6 +377,14 @@ def _build_detail_context(
     if owner_form is None:
         owner_form = LibraryEntryOwnerForm(
             instance=entry,
+        )
+
+    if franchise_form is None:
+        franchise_form = (
+            GameFranchiseOwnerForm(
+                instance=entry.game,
+                prefix="franchise",
+            )
         )
 
     for playthrough in entry.detail_playthroughs:
@@ -488,6 +498,7 @@ def _build_detail_context(
         "owned_accesses": owned_accesses,
         "wishlist_accesses": wishlist_accesses,
         "owner_form": owner_form,
+        "franchise_form": franchise_form,
         "new_playthrough_form": new_playthrough_form,
         "new_access_form": new_access_form,
         "new_content_form": new_content_form,
@@ -533,6 +544,37 @@ def update_entry(request, slug):
         _build_detail_context(
             entry,
             owner_form=form,
+        ),
+    )
+
+
+@login_required
+@require_POST
+def update_game_franchise(
+    request,
+    slug,
+):
+    entry = _get_detail_entry(slug)
+
+    form = GameFranchiseOwnerForm(
+        request.POST,
+        instance=entry.game,
+        prefix="franchise",
+    )
+
+    if form.is_valid():
+        game = form.save()
+
+        return redirect(
+            game.get_absolute_url()
+        )
+
+    return render(
+        request,
+        "games/detail.html",
+        _build_detail_context(
+            entry,
+            franchise_form=form,
         ),
     )
 

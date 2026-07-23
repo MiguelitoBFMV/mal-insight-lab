@@ -45,6 +45,10 @@ class Franchise(models.Model):
     description = models.TextField(
         blank=True,
     )
+    logo_url = models.URLField(
+        max_length=500,
+        blank=True,
+    )
     display_order = models.PositiveIntegerField(
         default=0,
     )
@@ -72,6 +76,14 @@ class Franchise(models.Model):
 
     def __str__(self):
         return self.name
+
+    def get_absolute_url(self):
+        return reverse(
+            "games:franchise_detail",
+            kwargs={
+                "slug": self.slug,
+            },
+        )
 
 
 class Game(models.Model):

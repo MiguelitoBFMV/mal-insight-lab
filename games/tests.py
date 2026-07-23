@@ -7,7 +7,9 @@ from django.urls import reverse
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
+from games.forms import IGDBNewGameImportForm
 from games.models import (
+    Franchise,
     Game,
     GameAccess,
     LibraryEntry,
@@ -846,6 +848,723 @@ class GameKirokuOwnerControlsTests(TestCase):
 
         self.assertIsNone(
             multiplayer_entry.main_story_hours_override
+        )
+
+
+class GameKirokuFranchiseTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.owner = get_user_model().objects.create_user(
+            username="franchise-owner",
+            password="test-password",
+        )
+
+        cls.active_franchise = Franchise.objects.create(
+            name="Assassin's Creed",
+            description="A historical action series.",
+            logo_url="https://example.com/ac-logo.png",
+        )
+
+        cls.empty_franchise = Franchise.objects.create(
+            name="Persona",
+            description="A Japanese role-playing series.",
+        )
+
+        cls.other_franchise = Franchise.objects.create(
+            name="Yakuza / Like a Dragon",
+        )
+
+        cls.old_game = Game.objects.create(
+            title="Assassin's Creed",
+            first_release_date=date(
+                2007,
+                11,
+                13,
+            ),
+            franchise=cls.active_franchise,
+        )
+
+        cls.old_entry = LibraryEntry.objects.create(
+            game=cls.old_game,
+            status=LibraryEntry.Status.COMPLETED,
+        )
+
+        GameAccess.objects.create(
+            library_entry=cls.old_entry,
+            access_type=GameAccess.AccessType.OWNED,
+            platform_name=GameAccess.Platform.PC,
+            store=GameAccess.Store.STEAM,
+        )
+
+        cls.new_game = Game.objects.create(
+            title="Assassin's Creed Mirage",
+            first_release_date=date(
+                2023,
+                10,
+                5,
+            ),
+            franchise=cls.active_franchise,
+        )
+
+        cls.new_entry = LibraryEntry.objects.create(
+            game=cls.new_game,
+            status=LibraryEntry.Status.PLAYING,
+        )
+
+        cls.new_access = GameAccess.objects.create(
+            library_entry=cls.new_entry,
+            access_type=GameAccess.AccessType.OWNED,
+            platform_name=GameAccess.Platform.PLAYSTATION_5,
+            store=GameAccess.Store.PLAYSTATION_STORE,
+        )
+
+        Playthrough.objects.create(
+            library_entry=cls.new_entry,
+            access=cls.new_access,
+            number=1,
+            status=Playthrough.Status.PLAYING,
+            text_language=Playthrough.TextLanguage.ENGLISH,
+        )
+
+        cls.unassigned_game = Game.objects.create(
+            title="Judgment",
+            first_release_date=date(
+                2018,
+                12,
+                13,
+            ),
+        )
+
+        cls.unassigned_entry = (
+            LibraryEntry.objects.create(
+                game=cls.unassigned_game,
+                status=(
+                    LibraryEntry.Status.PLAN_TO_PLAY
+                ),
+            )
+        )
+
+        GameAccess.objects.create(
+            library_entry=cls.unassigned_entry,
+            access_type=GameAccess.AccessType.OWNED,
+            platform_name=GameAccess.Platform.PLAYSTATION_5,
+            store=GameAccess.Store.PLAYSTATION_STORE,
+        )
+
+    def franchise_list_url(self):
+        return reverse(
+            "games:franchise_list"
+        )
+
+    def franchise_detail_url(
+        self,
+        franchise=None,
+    ):
+        selected_franchise = (
+            franchise or self.active_franchise
+        )
+
+        return reverse(
+            "games:franchise_detail",
+            kwargs={
+                "slug": selected_franchise.slug,
+            },
+        )
+
+    def create_url(self):
+        return reverse(
+            "games:create_franchise"
+        )
+
+    def update_url(
+        self,
+        franchise=None,
+    ):
+        selected_franchise = (
+            franchise or self.active_franchise
+        )
+
+        return reverse(
+            "games:update_franchise",
+            kwargs={
+                "slug": selected_franchise.slug,
+            },
+        )
+
+    def delete_url(
+        self,
+        franchise=None,
+    ):
+        selected_franchise = (
+            franchise or self.empty_franchise
+        )
+
+        return reverse(
+            "games:delete_franchise",
+            kwargs={
+                "slug": selected_franchise.slug,
+            },
+        )
+
+    def assignment_url(
+        self,
+        game=None,
+    ):
+        selected_game = (
+            game or self.unassigned_game
+        )
+
+        return reverse(
+            "games:update_game_franchise",
+            kwargs={
+                "slug": selected_game.slug,
+            },
+        )
+
+    def test_franchise_list_is_public(self):
+        response = self.client.get(
+            self.franchise_list_url()
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+        self.assertTemplateUsed(
+            response,
+            "games/franchise_list.html",
+        )
+
+    def test_anonymous_list_excludes_empty_franchises(
+        self,
+    ):
+        response = self.client.get(
+            self.franchise_list_url()
+        )
+
+        franchises = list(
+            response.context["franchises"]
+        )
+
+        self.assertIn(
+            self.active_franchise,
+            franchises,
+        )
+        self.assertNotIn(
+            self.empty_franchise,
+            franchises,
+        )
+
+    def test_owner_list_includes_empty_franchises(
+        self,
+    ):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(
+            self.franchise_list_url()
+        )
+
+        franchises = list(
+            response.context["franchises"]
+        )
+
+        self.assertIn(
+            self.active_franchise,
+            franchises,
+        )
+        self.assertIn(
+            self.empty_franchise,
+            franchises,
+        )
+        self.assertContains(
+            response,
+            "Add Franchise",
+        )
+
+    def test_franchise_detail_is_public(self):
+        response = self.client.get(
+            self.franchise_detail_url()
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+        self.assertTemplateUsed(
+            response,
+            "games/franchise_detail.html",
+        )
+        self.assertContains(
+            response,
+            "Assassin&#x27;s Creed",
+        )
+
+    def test_owner_controls_are_hidden_from_anonymous_users(
+        self,
+    ):
+        response = self.client.get(
+            self.franchise_detail_url()
+        )
+
+        self.assertNotContains(
+            response,
+            "Edit Franchise",
+        )
+        self.assertNotContains(
+            response,
+            "Add Game",
+        )
+        self.assertNotContains(
+            response,
+            "Delete Franchise",
+        )
+
+    def test_owner_controls_and_add_game_are_visible(
+        self,
+    ):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(
+            self.franchise_detail_url()
+        )
+
+        self.assertContains(
+            response,
+            "Edit Franchise",
+        )
+        self.assertContains(
+            response,
+            "Add Game",
+        )
+        self.assertContains(
+            response,
+            "Delete Franchise",
+        )
+
+    def test_anonymous_creation_redirects_to_login(
+        self,
+    ):
+        response = self.client.post(
+            self.create_url(),
+            {
+                "name": "Final Fantasy",
+                "description": "",
+                "logo_url": "",
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+        self.assertIn(
+            reverse("login"),
+            response.url,
+        )
+        self.assertFalse(
+            Franchise.objects.filter(
+                name="Final Fantasy",
+            ).exists()
+        )
+
+    def test_authenticated_get_to_creation_returns_405(
+        self,
+    ):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(
+            self.create_url()
+        )
+
+        self.assertEqual(
+            response.status_code,
+            405,
+        )
+
+    def test_owner_can_create_franchise(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            self.create_url(),
+            {
+                "name": "Final Fantasy",
+                "description": (
+                    "A long-running RPG anthology."
+                ),
+                "logo_url": (
+                    "https://example.com/ff-logo.png"
+                ),
+            },
+        )
+
+        created_franchise = (
+            Franchise.objects.get(
+                name="Final Fantasy",
+            )
+        )
+
+        self.assertRedirects(
+            response,
+            created_franchise.get_absolute_url(),
+        )
+        self.assertEqual(
+            created_franchise.description,
+            "A long-running RPG anthology.",
+        )
+        self.assertEqual(
+            created_franchise.logo_url,
+            "https://example.com/ff-logo.png",
+        )
+
+    def test_owner_can_update_franchise(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            self.update_url(),
+            {
+                "franchise-name": (
+                    "Assassin's Creed"
+                ),
+                "franchise-description": (
+                    "Updated franchise description."
+                ),
+                "franchise-logo_url": (
+                    "https://example.com/new-logo.png"
+                ),
+            },
+        )
+
+        self.active_franchise.refresh_from_db()
+
+        self.assertRedirects(
+            response,
+            self.active_franchise.get_absolute_url(),
+        )
+        self.assertEqual(
+            self.active_franchise.description,
+            "Updated franchise description.",
+        )
+        self.assertEqual(
+            self.active_franchise.logo_url,
+            "https://example.com/new-logo.png",
+        )
+
+    def test_empty_franchise_can_be_deleted(self):
+        empty_franchise_pk = (
+            self.empty_franchise.pk
+        )
+
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            self.delete_url()
+        )
+
+        self.assertRedirects(
+            response,
+            self.franchise_list_url(),
+        )
+        self.assertFalse(
+            Franchise.objects.filter(
+                pk=empty_franchise_pk,
+            ).exists()
+        )
+
+    def test_franchise_with_games_cannot_be_deleted(
+        self,
+    ):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            self.delete_url(
+                franchise=self.active_franchise,
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+        self.assertContains(
+            response,
+            (
+                "A franchise with assigned games "
+                "cannot be deleted."
+            ),
+        )
+        self.assertTrue(
+            Franchise.objects.filter(
+                pk=self.active_franchise.pk,
+            ).exists()
+        )
+
+    def test_authenticated_get_to_delete_returns_405(
+        self,
+    ):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(
+            self.delete_url()
+        )
+
+        self.assertEqual(
+            response.status_code,
+            405,
+        )
+
+    def test_owner_can_assign_game_to_franchise(
+        self,
+    ):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            self.assignment_url(),
+            {
+                "franchise-franchise": str(
+                    self.active_franchise.pk
+                ),
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            self.unassigned_game.get_absolute_url(),
+        )
+
+        self.unassigned_game.refresh_from_db()
+
+        self.assertEqual(
+            self.unassigned_game.franchise,
+            self.active_franchise,
+        )
+
+    def test_owner_can_move_game_between_franchises(
+        self,
+    ):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            self.assignment_url(
+                game=self.old_game,
+            ),
+            {
+                "franchise-franchise": str(
+                    self.other_franchise.pk
+                ),
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            self.old_game.get_absolute_url(),
+        )
+
+        self.old_game.refresh_from_db()
+
+        self.assertEqual(
+            self.old_game.franchise,
+            self.other_franchise,
+        )
+
+    def test_owner_can_remove_game_from_franchise(
+        self,
+    ):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            self.assignment_url(
+                game=self.old_game,
+            ),
+            {
+                "franchise-franchise": "",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            self.old_game.get_absolute_url(),
+        )
+
+        self.old_game.refresh_from_db()
+
+        self.assertIsNone(
+            self.old_game.franchise
+        )
+
+    def test_anonymous_assignment_redirects_to_login(
+        self,
+    ):
+        response = self.client.post(
+            self.assignment_url(),
+            {
+                "franchise-franchise": str(
+                    self.active_franchise.pk
+                ),
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+        self.assertIn(
+            reverse("login"),
+            response.url,
+        )
+
+        self.unassigned_game.refresh_from_db()
+
+        self.assertIsNone(
+            self.unassigned_game.franchise
+        )
+
+    def test_release_timeline_orders_oldest_first_by_default(
+        self,
+    ):
+        response = self.client.get(
+            self.franchise_detail_url()
+        )
+
+        entries = list(
+            response.context["entries"]
+        )
+
+        self.assertEqual(
+            entries,
+            [
+                self.old_entry,
+                self.new_entry,
+            ],
+        )
+        self.assertEqual(
+            response.context["sort_order"],
+            "asc",
+        )
+
+    def test_release_timeline_can_order_newest_first(
+        self,
+    ):
+        response = self.client.get(
+            self.franchise_detail_url(),
+            {
+                "sort": "desc",
+            },
+        )
+
+        entries = list(
+            response.context["entries"]
+        )
+
+        self.assertEqual(
+            entries,
+            [
+                self.new_entry,
+                self.old_entry,
+            ],
+        )
+        self.assertEqual(
+            response.context["sort_order"],
+            "desc",
+        )
+
+    def test_invalid_sort_falls_back_to_oldest_first(
+        self,
+    ):
+        response = self.client.get(
+            self.franchise_detail_url(),
+            {
+                "sort": "something-invalid",
+            },
+        )
+
+        entries = list(
+            response.context["entries"]
+        )
+
+        self.assertEqual(
+            entries,
+            [
+                self.old_entry,
+                self.new_entry,
+            ],
+        )
+        self.assertEqual(
+            response.context["sort_order"],
+            "asc",
+        )
+
+    def test_playing_game_has_representative_priority(
+        self,
+    ):
+        response = self.client.get(
+            self.franchise_detail_url()
+        )
+
+        self.assertEqual(
+            response.context[
+                "representative_game"
+            ],
+            self.new_game,
+        )
+        self.assertEqual(
+            response.context[
+                "representative_label"
+            ],
+            "Currently Playing",
+        )
+
+        list_response = self.client.get(
+            self.franchise_list_url()
+        )
+
+        rendered_franchise = next(
+            franchise
+            for franchise
+            in list_response.context[
+                "franchises"
+            ]
+            if (
+                franchise.pk
+                == self.active_franchise.pk
+            )
+        )
+
+        self.assertEqual(
+            rendered_franchise.representative_game,
+            self.new_game,
+        )
+
+    def test_import_form_accepts_existing_franchise(
+        self,
+    ):
+        form = IGDBNewGameImportForm(
+            data={
+                "status": (
+                    LibraryEntry.Status.PLAN_TO_PLAY
+                ),
+                "franchise": str(
+                    self.active_franchise.pk
+                ),
+                "access_type": (
+                    GameAccess.AccessType.WISHLIST
+                ),
+                "platform_name": (
+                    GameAccess.Platform.PLAYSTATION_5
+                ),
+                "store": (
+                    GameAccess.Store.PLAYSTATION_STORE
+                ),
+                "notes": "",
+            }
+        )
+
+        self.assertTrue(
+            form.is_valid(),
+            form.errors.as_json(),
+        )
+        self.assertEqual(
+            form.cleaned_data["franchise"],
+            self.active_franchise,
         )
 
 

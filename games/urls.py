@@ -5,6 +5,7 @@ from .web import library as library_views
 from .web import detail as detail_views
 from .web import igdb as igdb_views
 from .web import platinum as platinum_views
+from .web import franchise as franchise_views
 
 app_name = "games"
 
@@ -24,6 +25,39 @@ urlpatterns = [
         "platinum/",
         platinum_views.platinum,
         name="platinum",
+    ),
+    path(
+        "franchises/",
+        franchise_views.franchise_list,
+        name="franchise_list",
+    ),
+    path(
+        "franchises/create/",
+        franchise_views.create_franchise,
+        name="create_franchise",
+    ),
+    path(
+        "franchises/<slug:slug>/update/",
+        franchise_views.update_franchise,
+        name="update_franchise",
+    ),
+    path(
+        "franchises/<slug:slug>/delete/",
+        franchise_views.delete_franchise,
+        name="delete_franchise",
+    ),
+    path(
+                "franchises/<slug:slug>/",
+                franchise_views.franchise_detail,
+                name="franchise_detail",
+        ),
+    path(
+        (
+            "library/<slug:slug>/"
+            "franchise/update/"
+        ),
+        detail_views.update_game_franchise,
+        name="update_game_franchise",
     ),
     path(
         "igdb/search/",
