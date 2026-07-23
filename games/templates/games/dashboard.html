@@ -58,14 +58,18 @@
                     </div>
                 </article>
 
-                <article class="metric-card">
+                <a
+                    class="metric-card metric-card--link"
+                    href="{% url 'games:platinum' %}"
+                    aria-label="Open Platinum Collection"
+                >
                     <span class="metric-icon">🏆</span>
 
                     <div>
                         <p>Platinum</p>
                         <strong>{{ platinum_count }}</strong>
                     </div>
-                </article>
+                </a>
 
                 <article class="metric-card">
                     <span class="metric-icon">⌛</span>

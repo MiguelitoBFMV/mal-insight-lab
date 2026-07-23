@@ -1,0 +1,301 @@
+{% extends "games/base.html" %}
+
+{% load i18n %}
+
+{% block title %}
+    Platinum Collection
+{% endblock %}
+
+{% block module_name %}
+    Platinum Collection · Game Kiroku
+{% endblock %}
+
+{% block content %}
+    {% language "en" %}
+    <header class="platinum-page-header">
+        <div>
+            <p class="dashboard-eyebrow">
+                Trophy History
+            </p>
+
+            <h1>Platinum Collection</h1>
+
+            <p>
+                A personal timeline of completed platinum
+                trophies and the next games worth pursuing.
+            </p>
+        </div>
+
+        <aside class="platinum-total-card">
+            <span>Total Unlocked</span>
+            <strong>{{ platinum_count }}</strong>
+            <small>Platinum trophies</small>
+        </aside>
+    </header>
+
+    {% if latest_platinum %}
+        <section
+            class="latest-platinum-panel"
+            aria-labelledby="latest-platinum-title"
+        >
+            <div class="latest-platinum-cover">
+                {% if latest_platinum.game.cover_url %}
+                    <img
+                        src="{{ latest_platinum.game.cover_url }}"
+                        alt="{{ latest_platinum.game.title }} cover"
+                    >
+                {% else %}
+                    <span>
+                        {{ latest_platinum.game.title|slice:":2"|upper }}
+                    </span>
+                {% endif %}
+            </div>
+
+            <div class="latest-platinum-copy">
+                <p class="panel-kicker">
+                    Latest Platinum
+                </p>
+
+                <h2 id="latest-platinum-title">
+                    {{ latest_platinum.game.title }}
+                </h2>
+
+                {% if latest_platinum.game.franchise %}
+                    <span>
+                        {{ latest_platinum.game.franchise.name }}
+                    </span>
+                {% endif %}
+
+                <strong>
+                    🏆
+                    {{ latest_platinum.platinum_earned_on|date:"F d, Y" }}
+                </strong>
+
+                <a
+                    class="detail-secondary-action"
+                    href="{{ latest_platinum.game.get_absolute_url }}"
+                >
+                    Open Game
+                </a>
+            </div>
+        </section>
+    {% endif %}
+
+    <section
+        class="dashboard-panel platinum-history-panel"
+        aria-labelledby="platinum-history-title"
+    >
+        <header class="panel-header">
+            <div>
+                <p class="panel-kicker">
+                    Trophy Timeline
+                </p>
+
+                <h2 id="platinum-history-title">
+                    Platinum History
+                </h2>
+            </div>
+
+            <span class="panel-count">
+                {{ dated_platinums|length }}
+            </span>
+        </header>
+
+        {% regroup dated_platinums by platinum_earned_on.year as platinum_years %}
+
+        <div class="platinum-year-list">
+            {% for year in platinum_years %}
+                <section class="platinum-year-group">
+                    <header>
+                        <strong>{{ year.grouper }}</strong>
+
+                        <span>
+                            {{ year.list|length }}
+                            {% if year.list|length == 1 %}
+                                platinum
+                            {% else %}
+                                platinums
+                            {% endif %}
+                        </span>
+                    </header>
+
+                    <div class="platinum-card-grid">
+                        {% for entry in year.list %}
+                            <a
+                                class="platinum-game-card"
+                                href="{{ entry.game.get_absolute_url }}"
+                                aria-label="Open {{ entry.game.title }}"
+                            >
+                                <div class="platinum-game-cover">
+                                    {% if entry.game.cover_url %}
+                                        <img
+                                            src="{{ entry.game.cover_url }}"
+                                            alt="{{ entry.game.title }} cover"
+                                        >
+                                    {% else %}
+                                        <span>
+                                            {{ entry.game.title|slice:":2"|upper }}
+                                        </span>
+                                    {% endif %}
+
+                                    <span class="platinum-game-trophy">
+                                        🏆
+                                    </span>
+                                </div>
+
+                                <div class="platinum-game-copy">
+                                    <p>
+                                        {% if entry.game.franchise %}
+                                            {{ entry.game.franchise.name }}
+                                        {% else %}
+                                            No Franchise
+                                        {% endif %}
+                                    </p>
+
+                                    <h3>{{ entry.game.title }}</h3>
+
+                                    <time
+                                        datetime="{{ entry.platinum_earned_on|date:'Y-m-d' }}"
+                                    >
+                                        {{ entry.platinum_earned_on|date:"M d, Y" }}
+                                    </time>
+                                </div>
+                            </a>
+                        {% endfor %}
+                    </div>
+                </section>
+            {% empty %}
+                <p class="empty-state">
+                    No platinum acquisition dates have been
+                    registered yet.
+                </p>
+            {% endfor %}
+        </div>
+    </section>
+
+    {% if undated_platinums %}
+        <section
+            class="dashboard-panel undated-platinum-panel"
+            aria-labelledby="undated-platinum-title"
+        >
+            <header class="panel-header">
+                <div>
+                    <p class="panel-kicker">
+                        Historical Records
+                    </p>
+
+                    <h2 id="undated-platinum-title">
+                        Date Unknown
+                    </h2>
+                </div>
+
+                <span class="panel-count">
+                    {{ undated_platinums|length }}
+                </span>
+            </header>
+
+            <p class="platinum-section-intro">
+                These trophies are unlocked, but their exact
+                acquisition date has not been registered.
+            </p>
+
+            <div class="platinum-compact-grid">
+                {% for entry in undated_platinums %}
+                    <a
+                        class="platinum-compact-card"
+                        href="{{ entry.game.get_absolute_url }}"
+                    >
+                        <div class="platinum-compact-cover">
+                            {% if entry.game.cover_url %}
+                                <img
+                                    src="{{ entry.game.cover_url }}"
+                                    alt=""
+                                >
+                            {% else %}
+                                {{ entry.game.title|slice:":2"|upper }}
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <h3>{{ entry.game.title }}</h3>
+                            <span>🏆 Date unknown</span>
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+
+    <section
+        class="dashboard-panel platinum-target-panel"
+        aria-labelledby="platinum-target-title"
+    >
+        <header class="panel-header">
+            <div>
+                <p class="panel-kicker">
+                    Next Objectives
+                </p>
+
+                <h2 id="platinum-target-title">
+                    Platinum Targets
+                </h2>
+            </div>
+
+            <span class="panel-count">
+                {{ platinum_targets|length }}
+            </span>
+        </header>
+
+        <p class="platinum-section-intro">
+            Games currently marked as future platinum goals.
+        </p>
+
+        <div class="platinum-target-grid">
+            {% for entry in platinum_targets %}
+                <a
+                    class="platinum-target-card"
+                    href="{{ entry.game.get_absolute_url }}"
+                >
+                    <div class="platinum-target-cover">
+                        {% if entry.game.cover_url %}
+                            <img
+                                src="{{ entry.game.cover_url }}"
+                                alt="{{ entry.game.title }} cover"
+                            >
+                        {% else %}
+                            <span>
+                                {{ entry.game.title|slice:":2"|upper }}
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <p>
+                            {% if entry.game.franchise %}
+                                {{ entry.game.franchise.name }}
+                            {% else %}
+                                Future Objective
+                            {% endif %}
+                        </p>
+
+                        <h3>{{ entry.game.title }}</h3>
+
+                        <span>
+                            {{ entry.get_status_display|default:"No Status" }}
+                        </span>
+                    </div>
+                </a>
+            {% empty %}
+                <p class="empty-state">
+                    No platinum targets are currently marked.
+                </p>
+            {% endfor %}
+        </div>
+    </section>
+
+    <footer class="game-footer">
+        <span>Game Kiroku · Platinum Collection</span>
+        <span>{{ platinum_count }} trophies unlocked</span>
+    </footer>
+    {% endlanguage %}
+{% endblock %}

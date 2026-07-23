@@ -64,6 +64,19 @@
                     Library
                 </a>
 
+                <a
+                    class="
+                        sidebar-link
+                        {% if active_page == 'platinum' %}
+                            sidebar-link--active
+                        {% endif %}
+                    "
+                    href="{% url 'games:platinum' %}"
+                >
+                    <span aria-hidden="true">🏆</span>
+                    Platinum
+                </a>
+
                 {% if user.is_authenticated %}
                     <a
                         class="sidebar-link

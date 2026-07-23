@@ -26,12 +26,20 @@ class LibraryEntryOwnerForm(forms.ModelForm):
         fields = (
             "status",
             "has_platinum",
+            "platinum_earned_on",
+            "is_platinum_target",
             "main_story_hours_override",
             "notes",
         )
         labels = {
             "status": "Library Status",
             "has_platinum": "Platinum Unlocked",
+            "platinum_earned_on": (
+                "Platinum Earned On"
+            ),
+            "is_platinum_target": (
+                "Platinum Target"
+            ),
             "main_story_hours_override": (
                 "Manual Main Story Duration"
             ),
@@ -44,6 +52,18 @@ class LibraryEntryOwnerForm(forms.ModelForm):
                 }
             ),
             "has_platinum": forms.CheckboxInput(
+                attrs={
+                    "class": "detail-owner-checkbox",
+                }
+            ),
+            "platinum_earned_on": forms.DateInput(
+                format="%Y-%m-%d",
+                attrs={
+                    "class": "detail-owner-control",
+                    "type": "date",
+                },
+            ),
+            "is_platinum_target": forms.CheckboxInput(
                 attrs={
                     "class": "detail-owner-checkbox",
                 }
@@ -66,7 +86,8 @@ class LibraryEntryOwnerForm(forms.ModelForm):
                     ),
                     "rows": 4,
                     "placeholder": (
-                        "Personal context, priorities or notes..."
+                        "Personal context, priorities "
+                        "or notes..."
                     ),
                 }
             ),
@@ -98,6 +119,19 @@ class LibraryEntryOwnerForm(forms.ModelForm):
                 "Playing and Paused require an active "
                 "playthrough."
             )
+
+        self.fields[
+            "platinum_earned_on"
+        ].help_text = (
+            "Optional. Leave blank when the exact "
+            "date is unknown."
+        )
+
+        self.fields[
+            "is_platinum_target"
+        ].help_text = (
+            "Mark this game as a future platinum goal."
+        )
 
     def clean(self):
         cleaned_data = super().clean()
@@ -173,6 +207,15 @@ class LibraryEntryOwnerForm(forms.ModelForm):
                     "the game has at least one Owned access."
                 ),
             )
+
+        if has_platinum:
+            cleaned_data[
+                "is_platinum_target"
+            ] = False
+        else:
+            cleaned_data[
+                "platinum_earned_on"
+            ] = None
 
         return cleaned_data
     
@@ -816,6 +859,28 @@ class IGDBNewGameImportForm(forms.Form):
         ),
     )
 
+    platinum_earned_on = forms.DateField(
+        required=False,
+        label="Platinum Earned On",
+        widget=forms.DateInput(
+            format="%Y-%m-%d",
+            attrs={
+                "class": "detail-owner-control",
+                "type": "date",
+            },
+        ),
+    )
+
+    is_platinum_target = forms.BooleanField(
+        required=False,
+        label="Platinum Target",
+        widget=forms.CheckboxInput(
+            attrs={
+                "class": "detail-owner-checkbox",
+            }
+        ),
+    )
+
     access_type = forms.ChoiceField(
         choices=GameAccess.AccessType.choices,
         label="Access Type",
@@ -882,6 +947,12 @@ class IGDBNewGameImportForm(forms.Form):
             "has_platinum"
         )
 
+        platinum_earned_on = (
+            cleaned_data.get(
+                "platinum_earned_on"
+            )
+        )
+
         if (
             status
             == LibraryEntry.Status.MULTIPLAYER
@@ -909,6 +980,23 @@ class IGDBNewGameImportForm(forms.Form):
                     "Wishlist accesses can be added later."
                 ),
             )
+
+        if (
+            platinum_earned_on
+            and not has_platinum
+        ):
+            self.add_error(
+                "platinum_earned_on",
+                (
+                    "A platinum acquisition date "
+                    "requires Platinum Unlocked."
+                ),
+            )
+
+        if has_platinum:
+            cleaned_data[
+                "is_platinum_target"
+            ] = False
 
         return cleaned_data
     

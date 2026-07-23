@@ -215,6 +215,14 @@ class LibraryEntry(models.Model):
     has_platinum = models.BooleanField(
         default=False,
     )
+    platinum_earned_on = models.DateField(
+        null=True,
+        blank=True,
+    )
+
+    is_platinum_target = models.BooleanField(
+        default=False,
+    )
     main_story_hours_override = models.DecimalField(
         max_digits=7,
         decimal_places=2,
@@ -242,12 +250,70 @@ class LibraryEntry(models.Model):
         constraints = [
             models.CheckConstraint(
                 condition=(
-                    Q(main_story_hours_override__isnull=True)
-                    | Q(main_story_hours_override__gt=0)
+                    Q(
+                        main_story_hours_override__isnull=True
+                    )
+                    | Q(
+                        main_story_hours_override__gt=0
+                    )
                 ),
                 name="games_library_override_positive",
             ),
+            models.CheckConstraint(
+                condition=(
+                    Q(
+                        platinum_earned_on__isnull=True
+                    )
+                    | Q(
+                        has_platinum=True
+                    )
+                ),
+                name=(
+                    "games_library_platinum_date_"
+                    "requires_unlock"
+                ),
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(
+                        has_platinum=False
+                    )
+                    | Q(
+                        is_platinum_target=False
+                    )
+                ),
+                name=(
+                    "games_library_platinum_target_"
+                    "not_unlocked"
+                ),
+            ),
         ]
+
+    def clean(self):
+        super().clean()
+
+        errors = {}
+
+        if (
+            self.platinum_earned_on
+            and not self.has_platinum
+        ):
+            errors["platinum_earned_on"] = (
+                "A platinum date requires the "
+                "platinum to be marked as unlocked."
+            )
+
+        if (
+            self.has_platinum
+            and self.is_platinum_target
+        ):
+            errors["is_platinum_target"] = (
+                "A game with an unlocked platinum "
+                "cannot remain a platinum target."
+            )
+
+        if errors:
+            raise ValidationError(errors)
 
     @property
     def effective_main_story_hours(self):

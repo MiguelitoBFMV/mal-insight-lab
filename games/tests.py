@@ -226,6 +226,24 @@ class GameKirokuModelTests(TestCase):
             100,
         )
 
+    def test_platinum_date_requires_unlocked_platinum(self):
+        self.entry.has_platinum = False
+        self.entry.platinum_earned_on = date(
+            2024,
+            5,
+            31,
+        )
+
+        with self.assertRaises(ValidationError):
+            self.entry.full_clean()
+
+    def test_unlocked_platinum_cannot_remain_target(self):
+        self.entry.has_platinum = True
+        self.entry.is_platinum_target = True
+
+        with self.assertRaises(ValidationError):
+            self.entry.full_clean()
+
 
 class GameKirokuLibraryTests(TestCase):
     @classmethod
@@ -309,6 +327,197 @@ class GameKirokuLibraryTests(TestCase):
         self.assertNotContains(
             response,
             "Rocket League",
+        )
+
+
+class GameKirokuPlatinumTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.dated_game = Game.objects.create(
+            title="Dated Platinum",
+        )
+        cls.dated_entry = LibraryEntry.objects.create(
+            game=cls.dated_game,
+            status=LibraryEntry.Status.COMPLETED,
+            has_platinum=True,
+            platinum_earned_on=date(2024, 5, 31),
+        )
+        GameAccess.objects.create(
+            library_entry=cls.dated_entry,
+            access_type=GameAccess.AccessType.OWNED,
+            platform_name=GameAccess.Platform.PLAYSTATION_5,
+            store=GameAccess.Store.PLAYSTATION_STORE,
+        )
+
+        cls.older_game = Game.objects.create(
+            title="Older Platinum",
+        )
+        cls.older_entry = LibraryEntry.objects.create(
+            game=cls.older_game,
+            status=LibraryEntry.Status.COMPLETED,
+            has_platinum=True,
+            platinum_earned_on=date(2018, 6, 18),
+        )
+        GameAccess.objects.create(
+            library_entry=cls.older_entry,
+            access_type=GameAccess.AccessType.OWNED,
+            platform_name=GameAccess.Platform.PLAYSTATION_5,
+            store=GameAccess.Store.PLAYSTATION_STORE,
+        )
+
+        cls.undated_game = Game.objects.create(
+            title="Undated Platinum",
+        )
+        cls.undated_entry = LibraryEntry.objects.create(
+            game=cls.undated_game,
+            status=LibraryEntry.Status.COMPLETED,
+            has_platinum=True,
+        )
+        GameAccess.objects.create(
+            library_entry=cls.undated_entry,
+            access_type=GameAccess.AccessType.OWNED,
+            platform_name=GameAccess.Platform.PLAYSTATION_5,
+            store=GameAccess.Store.PLAYSTATION_STORE,
+        )
+
+        cls.target_game = Game.objects.create(
+            title="Platinum Target",
+        )
+        cls.target_entry = LibraryEntry.objects.create(
+            game=cls.target_game,
+            status=LibraryEntry.Status.PLAN_TO_PLAY,
+            is_platinum_target=True,
+        )
+        GameAccess.objects.create(
+            library_entry=cls.target_entry,
+            access_type=GameAccess.AccessType.OWNED,
+            platform_name=GameAccess.Platform.PLAYSTATION_5,
+            store=GameAccess.Store.PLAYSTATION_STORE,
+        )
+
+    def test_platinum_page_is_public(self):
+        response = self.client.get(
+            reverse("games:platinum")
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(
+            response,
+            "games/platinum.html",
+        )
+
+    def test_platinum_page_separates_collection_sections(self):
+        response = self.client.get(
+            reverse("games:platinum")
+        )
+
+        self.assertEqual(
+            response.context["platinum_count"],
+            3,
+        )
+        self.assertEqual(
+            response.context["latest_platinum"],
+            self.dated_entry,
+        )
+        self.assertIn(
+            self.dated_entry,
+            response.context["dated_platinums"],
+        )
+        self.assertIn(
+            self.older_entry,
+            response.context["dated_platinums"],
+        )
+        self.assertIn(
+            self.undated_entry,
+            response.context["undated_platinums"],
+        )
+        self.assertIn(
+            self.target_entry,
+            response.context["platinum_targets"],
+        )
+
+    def test_platinum_history_orders_newest_first(self):
+        response = self.client.get(
+            reverse("games:platinum")
+        )
+
+        dated_platinums = response.context[
+            "dated_platinums"
+        ]
+
+        self.assertEqual(
+            dated_platinums,
+            [
+                self.dated_entry,
+                self.older_entry,
+            ],
+        )
+
+    def test_library_filters_unlocked_platinums(self):
+        response = self.client.get(
+            reverse("games:library"),
+            {
+                "platinum": "unlocked",
+            },
+        )
+
+        self.assertContains(
+            response,
+            "Dated Platinum",
+        )
+        self.assertContains(
+            response,
+            "Older Platinum",
+        )
+        self.assertContains(
+            response,
+            "Undated Platinum",
+        )
+        entries = list(
+            response.context["entries"]
+        )
+
+        self.assertNotIn(
+            self.target_entry,
+            entries,
+)
+
+    def test_library_filters_platinum_targets(self):
+        response = self.client.get(
+            reverse("games:library"),
+            {
+                "platinum": "target",
+            },
+        )
+
+        self.assertContains(
+            response,
+            "Platinum Target",
+        )
+        self.assertNotContains(
+            response,
+            "Dated Platinum",
+        )
+
+    def test_unlocked_filter_orders_dates_before_unknown(self):
+        response = self.client.get(
+            reverse("games:library"),
+            {
+                "platinum": "unlocked",
+            },
+        )
+
+        entries = list(
+            response.context["entries"]
+        )
+
+        self.assertEqual(
+            entries,
+            [
+                self.dated_entry,
+                self.older_entry,
+                self.undated_entry,
+            ],
         )
 
 
