@@ -1025,6 +1025,800 @@
         </section>
     </div>
 
+    {% if competitive_modes or user.is_authenticated %}
+        <section
+            class="dashboard-panel competitive-ranking-panel"
+            aria-labelledby="competitive-ranking-title"
+        >
+            <header class="panel-header">
+                <div>
+                    <p class="panel-kicker">
+                        Ranked History
+                    </p>
+
+                    <h2 id="competitive-ranking-title">
+                        Competitive Ranking
+                    </h2>
+                </div>
+
+                <div class="competitive-panel-counts">
+                    <span class="panel-count">
+                        {{ competitive_mode_count }}
+                    </span>
+
+                    {% if competitive_record_count %}
+                        <small>
+                            {{ competitive_record_count }}
+                            update{{ competitive_record_count|pluralize }}
+                        </small>
+                    {% endif %}
+                </div>
+            </header>
+
+            {% if competitive_modes %}
+                <div class="competitive-mode-grid">
+                    {% for mode in competitive_modes %}
+                        <article
+                            class="
+                                competitive-mode-card
+                                {% if not mode.is_active %}
+                                    competitive-mode-card--inactive
+                                {% endif %}
+                            "
+                        >
+                            <header class="competitive-mode-header">
+                                <div>
+                                    <span>
+                                        Competitive Mode
+                                    </span>
+
+                                    <h3>{{ mode.name }}</h3>
+                                </div>
+
+                                {% if mode.is_active %}
+                                    <span class="competitive-mode-state">
+                                        Active
+                                    </span>
+                                {% else %}
+                                    <span
+                                        class="
+                                            competitive-mode-state
+                                            competitive-mode-state--inactive
+                                        "
+                                    >
+                                        Archived
+                                    </span>
+                                {% endif %}
+                            </header>
+
+                            {% if mode.current_record %}
+                                <div class="competitive-current-rank">
+                                    <span>Current Rank</span>
+
+                                    <strong>
+                                        {{ mode.current_record.rank_tier.name }}
+                                    </strong>
+
+                                    {% if mode.current_record.division %}
+                                        <p>
+                                            Division
+                                            {{ mode.current_record.division_display }}
+                                        </p>
+                                    {% endif %}
+
+                                    <div class="competitive-current-meta">
+                                        {% if mode.current_record.season %}
+                                            <span>
+                                                {{ mode.current_record.season }}
+                                            </span>
+                                        {% endif %}
+
+                                        <time
+                                            datetime="{{ mode.current_record.recorded_at|date:'c' }}"
+                                        >
+                                            {% language "en" %}
+                                                {{ mode.current_record.recorded_at|date:"M d, Y · H:i" }}
+                                            {% endlanguage %}
+                                        </time>
+                                    </div>
+
+                                    {% if mode.current_record.notes %}
+                                        <p class="competitive-current-notes">
+                                            {{ mode.current_record.notes }}
+                                        </p>
+                                    {% endif %}
+                                </div>
+                            {% else %}
+                                <div
+                                    class="
+                                        competitive-current-rank
+                                        competitive-current-rank--empty
+                                    "
+                                >
+                                    <span>Current Rank</span>
+
+                                    <strong>Unranked</strong>
+
+                                    <p>
+                                        No rank updates have been recorded.
+                                    </p>
+                                </div>
+                            {% endif %}
+
+                            {% if mode.detail_rank_records %}
+                                <details class="competitive-history">
+                                    <summary>
+                                        Rank History
+                                        <span>
+                                            {{ mode.detail_rank_records|length }}
+                                        </span>
+                                    </summary>
+
+                                    <div class="competitive-history-list">
+                                        {% for record in mode.detail_rank_records %}
+                                            <article class="competitive-history-record">
+                                                <div class="competitive-history-rank">
+                                                    <strong>
+                                                        {{ record.rank_tier.name }}
+                                                    </strong>
+
+                                                    {% if record.division %}
+                                                        <span>
+                                                            Division
+                                                            {{ record.division_display }}
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+
+                                                <div class="competitive-history-meta">
+                                                    {% if record.season %}
+                                                        <span>
+                                                            {{ record.season }}
+                                                        </span>
+                                                    {% endif %}
+
+                                                    <time
+                                                        datetime="{{ record.recorded_at|date:'c' }}"
+                                                    >
+                                                        {% language "en" %}
+                                                            {{ record.recorded_at|date:"M d, Y · H:i" }}
+                                                        {% endlanguage %}
+                                                    </time>
+                                                </div>
+
+                                                {% if record.notes %}
+                                                    <p>
+                                                        {{ record.notes }}
+                                                    </p>
+                                                {% endif %}
+
+                                                {% if user.is_authenticated %}
+                                                    <details
+                                                        class="competitive-record-editor"
+                                                        {% if record.owner_form.errors %}
+                                                            open
+                                                        {% endif %}
+                                                    >
+                                                        <summary>
+                                                            Manage Rank Update
+                                                        </summary>
+
+                                                        <form
+                                                            method="post"
+                                                            action="{% url 'games:update_competitive_record' game.slug record.pk %}"
+                                                            class="competitive-record-editor-form"
+                                                        >
+                                                            {% csrf_token %}
+
+                                                            {% if record.owner_form.non_field_errors %}
+                                                                <div
+                                                                    class="
+                                                                        detail-form-error
+                                                                        detail-form-error--wide
+                                                                    "
+                                                                >
+                                                                    {% for error in record.owner_form.non_field_errors %}
+                                                                        <p>{{ error }}</p>
+                                                                    {% endfor %}
+                                                                </div>
+                                                            {% endif %}
+
+                                                            {% for field in record.owner_form %}
+                                                                <div
+                                                                    class="
+                                                                        competitive-owner-field
+
+                                                                        {% if field.name == 'notes' %}
+                                                                            competitive-owner-field--wide
+                                                                        {% endif %}
+                                                                    "
+                                                                >
+                                                                    <label for="{{ field.id_for_label }}">
+                                                                        {{ field.label }}
+                                                                    </label>
+
+                                                                    {{ field }}
+
+                                                                    {% if field.help_text %}
+                                                                        <small>
+                                                                            {{ field.help_text }}
+                                                                        </small>
+                                                                    {% endif %}
+
+                                                                    {% for error in field.errors %}
+                                                                        <p class="detail-form-error">
+                                                                            {{ error }}
+                                                                        </p>
+                                                                    {% endfor %}
+                                                                </div>
+                                                            {% endfor %}
+
+                                                            <div class="competitive-record-editor-actions">
+                                                                <button
+                                                                    type="submit"
+                                                                    class="competitive-record-save"
+                                                                >
+                                                                    Save Rank Update
+                                                                </button>
+                                                            </div>
+                                                        </form>
+
+                                                        <form
+                                                            method="post"
+                                                            action="{% url 'games:delete_competitive_record' game.slug record.pk %}"
+                                                            class="competitive-record-delete-form"
+                                                        >
+                                                            {% csrf_token %}
+
+                                                            <p>
+                                                                Deleting this update may change the
+                                                                current rank shown for this mode.
+                                                            </p>
+
+                                                            <button type="submit">
+                                                                Delete Rank Update
+                                                            </button>
+                                                        </form>
+                                                    </details>
+                                                {% endif %}
+                                            </article>
+                                        {% endfor %}
+                                    </div>
+                                </details>
+                            {% endif %}
+
+                            {% if user.is_authenticated %}
+                                <details
+                                    class="competitive-mode-editor"
+                                    {% if mode.owner_form.errors or competitive_mode_action_id == mode.pk %}
+                                        open
+                                    {% endif %}
+                                >
+                                    <summary>
+                                        Manage Competitive Mode
+                                    </summary>
+
+                                    {% if competitive_mode_action_id == mode.pk and competitive_mode_action_error %}
+                                        <p class="competitive-action-error">
+                                            {{ competitive_mode_action_error }}
+                                        </p>
+                                    {% endif %}
+
+                                    <form
+                                        method="post"
+                                        action="{% url 'games:update_competitive_mode' game.slug mode.pk %}"
+                                        class="competitive-mode-editor-form"
+                                    >
+                                        {% csrf_token %}
+
+                                        {% if mode.owner_form.non_field_errors %}
+                                            <div
+                                                class="
+                                                    detail-form-error
+                                                    detail-form-error--wide
+                                                "
+                                            >
+                                                {% for error in mode.owner_form.non_field_errors %}
+                                                    <p>{{ error }}</p>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+
+                                        {% for field in mode.owner_form %}
+                                            <div
+                                                class="
+                                                    competitive-owner-field
+
+                                                    {% if field.name == 'is_active' %}
+                                                        competitive-owner-field--check
+                                                    {% endif %}
+                                                "
+                                            >
+                                                {% if field.name == "is_active" %}
+                                                    <label
+                                                        class="competitive-owner-check"
+                                                        for="{{ field.id_for_label }}"
+                                                    >
+                                                        {{ field }}
+
+                                                        <span>
+                                                            {{ field.label }}
+                                                        </span>
+                                                    </label>
+                                                {% else %}
+                                                    <label for="{{ field.id_for_label }}">
+                                                        {{ field.label }}
+                                                    </label>
+
+                                                    {{ field }}
+                                                {% endif %}
+
+                                                {% if field.help_text %}
+                                                    <small>{{ field.help_text }}</small>
+                                                {% endif %}
+
+                                                {% for error in field.errors %}
+                                                    <p class="detail-form-error">
+                                                        {{ error }}
+                                                    </p>
+                                                {% endfor %}
+                                            </div>
+                                        {% endfor %}
+
+                                        <div class="competitive-mode-editor-actions">
+                                            <button
+                                                type="submit"
+                                                class="competitive-mode-save"
+                                            >
+                                                Save Mode
+                                            </button>
+                                        </div>
+                                    </form>
+
+                                    <form
+                                        method="post"
+                                        action="{% url 'games:delete_competitive_mode' game.slug mode.pk %}"
+                                        class="competitive-mode-delete-form"
+                                    >
+                                        {% csrf_token %}
+
+                                        <p>
+                                            Modes with rank history cannot be deleted.
+                                            Disable Active to archive this mode instead.
+                                        </p>
+
+                                        <button type="submit">
+                                            Delete Mode
+                                        </button>
+                                    </form>
+                                </details>
+                            {% endif %}
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="competitive-empty-state">
+                    <strong>
+                        No competitive configuration yet.
+                    </strong>
+
+                    <p>
+                        Add a mode and its rank tiers to begin
+                        tracking ranked progress.
+                    </p>
+                </div>
+            {% endif %}
+
+            {% if user.is_authenticated %}
+                <section
+                    class="competitive-owner-controls"
+                    aria-labelledby="competitive-controls-title"
+                >
+                    <header>
+                        <div>
+                            <span>Owner Controls</span>
+
+                            <h3 id="competitive-controls-title">
+                                Competitive Setup
+                            </h3>
+                        </div>
+
+                        <span class="owner-only-badge">
+                            Private
+                        </span>
+                    </header>
+
+                    <div class="competitive-owner-grid">
+                        <details
+                            class="competitive-owner-editor"
+                            {% if competitive_mode_form.errors %}
+                                open
+                            {% endif %}
+                        >
+                            <summary>
+                                Add Competitive Mode
+                            </summary>
+
+                            <form
+                                method="post"
+                                action="{% url 'games:create_competitive_mode' game.slug %}"
+                                class="competitive-owner-form"
+                            >
+                                {% csrf_token %}
+
+                                {% if competitive_mode_form.non_field_errors %}
+                                    <div
+                                        class="
+                                            detail-form-error
+                                            detail-form-error--wide
+                                        "
+                                    >
+                                        {% for error in competitive_mode_form.non_field_errors %}
+                                            <p>{{ error }}</p>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+
+                                {% for field in competitive_mode_form %}
+                                    <div
+                                        class="
+                                            competitive-owner-field
+                                            {% if field.name == 'is_active' %}
+                                                competitive-owner-field--check
+                                            {% endif %}
+                                        "
+                                    >
+                                        {% if field.name == "is_active" %}
+                                            <label
+                                                class="competitive-owner-check"
+                                                for="{{ field.id_for_label }}"
+                                            >
+                                                {{ field }}
+
+                                                <span>
+                                                    {{ field.label }}
+                                                </span>
+                                            </label>
+                                        {% else %}
+                                            <label for="{{ field.id_for_label }}">
+                                                {{ field.label }}
+                                            </label>
+
+                                            {{ field }}
+                                        {% endif %}
+
+                                        {% if field.help_text %}
+                                            <small>
+                                                {{ field.help_text }}
+                                            </small>
+                                        {% endif %}
+
+                                        {% for error in field.errors %}
+                                            <p class="detail-form-error">
+                                                {{ error }}
+                                            </p>
+                                        {% endfor %}
+                                    </div>
+                                {% endfor %}
+
+                                <div class="competitive-owner-actions">
+                                    <button type="submit">
+                                        Add Mode
+                                    </button>
+                                </div>
+                            </form>
+                        </details>
+
+                        <details
+                            class="competitive-owner-editor"
+                            {% if competitive_tier_form.errors %}
+                                open
+                            {% endif %}
+                        >
+                            <summary>
+                                Add Rank Tier
+                            </summary>
+
+                            <form
+                                method="post"
+                                action="{% url 'games:create_competitive_tier' game.slug %}"
+                                class="competitive-owner-form"
+                            >
+                                {% csrf_token %}
+
+                                {% if competitive_tier_form.non_field_errors %}
+                                    <div
+                                        class="
+                                            detail-form-error
+                                            detail-form-error--wide
+                                        "
+                                    >
+                                        {% for error in competitive_tier_form.non_field_errors %}
+                                            <p>{{ error }}</p>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+
+                                {% for field in competitive_tier_form %}
+                                    <div
+                                        class="
+                                            competitive-owner-field
+                                            {% if field.name == 'uses_divisions' %}
+                                                competitive-owner-field--check
+                                            {% endif %}
+                                        "
+                                    >
+                                        {% if field.name == "uses_divisions" %}
+                                            <label
+                                                class="competitive-owner-check"
+                                                for="{{ field.id_for_label }}"
+                                            >
+                                                {{ field }}
+
+                                                <span>
+                                                    {{ field.label }}
+                                                </span>
+                                            </label>
+                                        {% else %}
+                                            <label for="{{ field.id_for_label }}">
+                                                {{ field.label }}
+                                            </label>
+
+                                            {{ field }}
+                                        {% endif %}
+
+                                        {% if field.help_text %}
+                                            <small>
+                                                {{ field.help_text }}
+                                            </small>
+                                        {% endif %}
+
+                                        {% for error in field.errors %}
+                                            <p class="detail-form-error">
+                                                {{ error }}
+                                            </p>
+                                        {% endfor %}
+                                    </div>
+                                {% endfor %}
+
+                                <div class="competitive-owner-actions">
+                                    <button type="submit">
+                                        Add Rank Tier
+                                    </button>
+                                </div>
+                            </form>
+                        </details>
+
+                        <details
+                            class="competitive-owner-editor"
+                            {% if competitive_record_form.errors %}
+                                open
+                            {% endif %}
+                        >
+                            <summary>
+                                Record Rank Update
+                            </summary>
+
+                            <form
+                                method="post"
+                                action="{% url 'games:create_competitive_record' game.slug %}"
+                                class="competitive-owner-form"
+                            >
+                                {% csrf_token %}
+
+                                {% if competitive_record_form.non_field_errors %}
+                                    <div
+                                        class="
+                                            detail-form-error
+                                            detail-form-error--wide
+                                        "
+                                    >
+                                        {% for error in competitive_record_form.non_field_errors %}
+                                            <p>{{ error }}</p>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+
+                                {% for field in competitive_record_form %}
+                                    <div
+                                        class="
+                                            competitive-owner-field
+
+                                            {% if field.name == 'notes' %}
+                                                competitive-owner-field--wide
+                                            {% endif %}
+                                        "
+                                    >
+                                        <label for="{{ field.id_for_label }}">
+                                            {{ field.label }}
+                                        </label>
+
+                                        {{ field }}
+
+                                        {% if field.help_text %}
+                                            <small>
+                                                {{ field.help_text }}
+                                            </small>
+                                        {% endif %}
+
+                                        {% for error in field.errors %}
+                                            <p class="detail-form-error">
+                                                {{ error }}
+                                            </p>
+                                        {% endfor %}
+                                    </div>
+                                {% endfor %}
+
+                                <div class="competitive-owner-actions">
+                                    <button type="submit">
+                                        Record Rank
+                                    </button>
+                                </div>
+                            </form>
+                        </details>
+                    </div>
+
+                    {% if competitive_rank_tiers %}
+                        <section
+                            id="configured-ranks"
+                            class="competitive-tier-summary"
+                            aria-labelledby="configured-ranks-title"
+                        >
+                            <span id="configured-ranks-title">
+                                Configured Ranks
+                            </span>
+
+                            <div class="competitive-tier-list">
+                                {% for tier in competitive_rank_tiers %}
+                                    <article
+                                        class="
+                                            competitive-tier-editor
+
+                                            {% if tier.is_managed %}
+                                                competitive-tier-editor--open
+                                            {% endif %}
+                                        "
+                                    >
+                                        <header class="competitive-tier-header">
+                                            <span class="competitive-tier-heading">
+                                                <strong>{{ tier.name }}</strong>
+
+                                                {% if tier.uses_divisions %}
+                                                    <small>
+                                                        {{ tier.division_range_display }}
+                                                    </small>
+                                                {% else %}
+                                                    <small>No Divisions</small>
+                                                {% endif %}
+                                            </span>
+
+                                            {% if tier.is_managed %}
+                                                <a
+                                                    class="competitive-tier-close"
+                                                    href="{{ game.get_absolute_url }}#configured-ranks"
+                                                >
+                                                    Close
+                                                </a>
+                                            {% else %}
+                                                <a
+                                                    class="competitive-tier-manage-label"
+                                                    href="?manage_tier={{ tier.pk }}#configured-ranks"
+                                                >
+                                                    Manage
+                                                </a>
+                                            {% endif %}
+                                        </header>
+
+                                        {% if tier.is_managed %}
+                                            <div class="competitive-tier-editor-body">
+                                                {% if competitive_tier_action_id == tier.pk and competitive_tier_action_error %}
+                                                    <p class="competitive-action-error">
+                                                        {{ competitive_tier_action_error }}
+                                                    </p>
+                                                {% endif %}
+
+                                                <form
+                                                    method="post"
+                                                    action="{% url 'games:update_competitive_tier' game.slug tier.pk %}"
+                                                    class="competitive-tier-editor-form"
+                                                >
+                                                    {% csrf_token %}
+
+                                                    {% if tier.owner_form.non_field_errors %}
+                                                        <div
+                                                            class="
+                                                                detail-form-error
+                                                                detail-form-error--wide
+                                                            "
+                                                        >
+                                                            {% for error in tier.owner_form.non_field_errors %}
+                                                                <p>{{ error }}</p>
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% endif %}
+
+                                                    {% for field in tier.owner_form %}
+                                                        <div
+                                                            class="
+                                                                competitive-owner-field
+
+                                                                {% if field.name == 'uses_divisions' %}
+                                                                    competitive-owner-field--check
+                                                                {% endif %}
+                                                            "
+                                                        >
+                                                            {% if field.name == "uses_divisions" %}
+                                                                <label
+                                                                    class="competitive-owner-check"
+                                                                    for="{{ field.id_for_label }}"
+                                                                >
+                                                                    {{ field }}
+
+                                                                    <span>
+                                                                        {{ field.label }}
+                                                                    </span>
+                                                                </label>
+                                                            {% else %}
+                                                                <label for="{{ field.id_for_label }}">
+                                                                    {{ field.label }}
+                                                                </label>
+
+                                                                {{ field }}
+                                                            {% endif %}
+
+                                                            {% if field.help_text %}
+                                                                <small>
+                                                                    {{ field.help_text }}
+                                                                </small>
+                                                            {% endif %}
+
+                                                            {% for error in field.errors %}
+                                                                <p class="detail-form-error">
+                                                                    {{ error }}
+                                                                </p>
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% endfor %}
+
+                                                    <div class="competitive-tier-editor-actions">
+                                                        <button
+                                                            type="submit"
+                                                            class="competitive-tier-save"
+                                                        >
+                                                            Save Rank Tier
+                                                        </button>
+                                                    </div>
+                                                </form>
+
+                                                <form
+                                                    method="post"
+                                                    action="{% url 'games:delete_competitive_tier' game.slug tier.pk %}"
+                                                    class="competitive-tier-delete-form"
+                                                >
+                                                    {% csrf_token %}
+
+                                                    <p>
+                                                        A rank tier cannot be deleted
+                                                        while it is referenced by rank
+                                                        history.
+                                                    </p>
+
+                                                    <button type="submit">
+                                                        Delete Rank Tier
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        {% endif %}
+                                    </article>
+                                {% endfor %}
+                            </div>
+                        </section>
+                    {% endif %}
+                </section>
+            {% endif %}
+        </section>
+    {% endif %}
+
     <section
         class="dashboard-panel additional-content-panel"
         aria-labelledby="additional-content-title"

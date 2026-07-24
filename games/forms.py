@@ -1,6 +1,10 @@
 from django import forms
+from django.utils import timezone
 
 from games.models import (
+    CompetitiveMode,
+    CompetitiveRankRecord,
+    CompetitiveRankTier,
     Franchise,
     Game,
     GameAccess,
@@ -1184,3 +1188,330 @@ class IGDBNewGameImportForm(forms.Form):
             ] = False
 
         return cleaned_data
+
+
+class CompetitiveModeOwnerForm(forms.ModelForm):
+    class Meta:
+        model = CompetitiveMode
+        fields = (
+            "name",
+            "display_order",
+            "is_active",
+        )
+        labels = {
+            "name": "Mode Name",
+            "display_order": "Display Order",
+            "is_active": "Active",
+        }
+        widgets = {
+            "name": forms.TextInput(
+                attrs={
+                    "class": "detail-owner-control",
+                    "placeholder": (
+                        "2v2 or Ranked Battle Royale"
+                    ),
+                }
+            ),
+            "display_order": forms.NumberInput(
+                attrs={
+                    "class": "detail-owner-control",
+                    "min": 0,
+                }
+            ),
+            "is_active": forms.CheckboxInput(),
+        }
+
+    def __init__(
+        self,
+        *args,
+        library_entry,
+        **kwargs,
+    ):
+        self.library_entry = library_entry
+
+        super().__init__(
+            *args,
+            **kwargs,
+        )
+
+        self.instance.library_entry = (
+            library_entry
+        )
+
+
+class CompetitiveRankTierOwnerForm(forms.ModelForm):
+    class Meta:
+        model = CompetitiveRankTier
+        fields = (
+            "name",
+            "rank_order",
+            "uses_divisions",
+            "division_count",
+        )
+        labels = {
+            "name": "Rank Name",
+            "rank_order": "Rank Order",
+            "uses_divisions": "Uses Divisions",
+            "division_count": "Highest Division",
+        }
+        widgets = {
+            "name": forms.TextInput(
+                attrs={
+                    "class": "detail-owner-control",
+                    "placeholder": "Diamond II or Gold",
+                }
+            ),
+            "rank_order": forms.NumberInput(
+                attrs={
+                    "class": "detail-owner-control",
+                    "min": 0,
+                }
+            ),
+            "uses_divisions": forms.CheckboxInput(),
+            "division_count": forms.NumberInput(
+                attrs={
+                    "class": "detail-owner-control",
+                    "min": 1,
+                    "placeholder": "4 for Division I–IV",
+                }
+            ),
+        }
+
+    def __init__(
+        self,
+        *args,
+        library_entry,
+        **kwargs,
+    ):
+        self.library_entry = library_entry
+
+        super().__init__(
+            *args,
+            **kwargs,
+        )
+
+        self.instance.library_entry = (
+            library_entry
+        )
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        uses_divisions = cleaned_data.get(
+            "uses_divisions"
+        )
+        division_count = cleaned_data.get(
+            "division_count"
+        )
+
+        if uses_divisions and division_count is None:
+            self.add_error(
+                "division_count",
+                (
+                    "Enter how many divisions "
+                    "this rank uses."
+                ),
+            )
+
+        if (
+            not uses_divisions
+            and division_count is not None
+        ):
+            self.add_error(
+                "division_count",
+                (
+                    "A rank without divisions cannot "
+                    "define a division count."
+                ),
+            )
+
+        return cleaned_data
+
+
+class CompetitiveRankRecordOwnerForm(
+    forms.ModelForm
+):
+    class Meta:
+        model = CompetitiveRankRecord
+        fields = (
+            "mode",
+            "rank_tier",
+            "division",
+            "season",
+            "recorded_at",
+            "notes",
+        )
+        labels = {
+            "mode": "Competitive Mode",
+            "rank_tier": "Rank",
+            "division": "Division",
+            "season": "Season",
+            "recorded_at": "Recorded At",
+            "notes": "Notes",
+        }
+        widgets = {
+            "mode": forms.Select(
+                attrs={
+                    "class": "detail-owner-control",
+                }
+            ),
+            "rank_tier": forms.Select(
+                attrs={
+                    "class": "detail-owner-control",
+                }
+            ),
+            "division": forms.NumberInput(
+                attrs={
+                    "class": "detail-owner-control",
+                    "min": 1,
+                    "placeholder": "Optional",
+                }
+            ),
+            "season": forms.TextInput(
+                attrs={
+                    "class": "detail-owner-control",
+                    "placeholder": "Season 20",
+                }
+            ),
+            "recorded_at": forms.DateTimeInput(
+                format="%Y-%m-%dT%H:%M",
+                attrs={
+                    "class": "detail-owner-control",
+                    "type": "datetime-local",
+                },
+            ),
+            "notes": forms.Textarea(
+                attrs={
+                    "class": (
+                        "detail-owner-control "
+                        "detail-owner-textarea"
+                    ),
+                    "rows": 3,
+                    "placeholder": (
+                        "Promotion, placement result, "
+                        "session context..."
+                    ),
+                }
+            ),
+        }
+
+    def __init__(
+        self,
+        *args,
+        library_entry,
+        **kwargs,
+    ):
+        super().__init__(
+            *args,
+            **kwargs,
+        )
+
+        self.library_entry = library_entry
+
+        mode_queryset = (
+            CompetitiveMode.objects
+            .filter(
+                library_entry=library_entry,
+            )
+        )
+
+        if not self.instance.pk:
+            mode_queryset = mode_queryset.filter(
+                is_active=True,
+            )
+
+        self.fields["mode"].queryset = (
+            mode_queryset.order_by(
+                "display_order",
+                "name",
+            )
+        )
+
+        self.fields["rank_tier"].queryset = (
+            CompetitiveRankTier.objects
+            .filter(
+                library_entry=library_entry,
+            )
+            .order_by(
+                "rank_order",
+                "name",
+            )
+        )
+
+        self.fields[
+            "recorded_at"
+        ].input_formats = [
+            "%Y-%m-%dT%H:%M",
+        ]
+
+        if not self.is_bound and not self.instance.pk:
+            self.fields["recorded_at"].initial = (
+                timezone.localtime().strftime(
+                    "%Y-%m-%dT%H:%M"
+                )
+            )
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        mode = cleaned_data.get("mode")
+        rank_tier = cleaned_data.get("rank_tier")
+        division = cleaned_data.get("division")
+
+        if (
+            mode is not None
+            and mode.library_entry_id
+            != self.library_entry.pk
+        ):
+            self.add_error(
+                "mode",
+                (
+                    "The selected mode does not "
+                    "belong to this game."
+                ),
+            )
+
+        if (
+            rank_tier is not None
+            and rank_tier.library_entry_id
+            != self.library_entry.pk
+        ):
+            self.add_error(
+                "rank_tier",
+                (
+                    "The selected rank does not "
+                    "belong to this game."
+                ),
+            )
+
+        if (
+            rank_tier is not None
+            and not rank_tier.uses_divisions
+            and division is not None
+        ):
+            self.add_error(
+                "division",
+                (
+                    "The selected rank does not "
+                    "use divisions."
+                ),
+            )
+
+        if (
+            rank_tier is not None
+            and division is not None
+            and rank_tier.division_count is not None
+            and division > rank_tier.division_count
+        ):
+            self.add_error(
+                "division",
+                (
+                    "Division cannot be greater than "
+                    f"{rank_tier.division_count} "
+                    "for this rank."
+                ),
+            )
+
+        return cleaned_data
+
+

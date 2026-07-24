@@ -6,6 +6,9 @@ from games.models import (
     GameAccess,
     LibraryEntry,
     Playthrough,
+    CompetitiveMode,
+    CompetitiveRankRecord,
+    CompetitiveRankTier,
 )
 
 
@@ -202,3 +205,78 @@ class PlaythroughAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
+
+
+@admin.register(CompetitiveMode)
+class CompetitiveModeAdmin(admin.ModelAdmin):
+    list_display = (
+        "name",
+        "library_entry",
+        "display_order",
+        "is_active",
+        "updated_at",
+    )
+    list_filter = (
+        "is_active",
+    )
+    search_fields = (
+        "name",
+        "library_entry__game__title",
+    )
+    ordering = (
+        "library_entry__game__title",
+        "display_order",
+        "name",
+    )
+
+
+@admin.register(CompetitiveRankTier)
+class CompetitiveRankTierAdmin(admin.ModelAdmin):
+    list_display = (
+        "name",
+        "library_entry",
+        "rank_order",
+        "uses_divisions",
+        "division_count",
+    )
+    list_filter = (
+        "uses_divisions",
+    )
+    search_fields = (
+        "name",
+        "library_entry__game__title",
+    )
+    ordering = (
+        "library_entry__game__title",
+        "rank_order",
+        "name",
+    )
+
+
+@admin.register(CompetitiveRankRecord)
+class CompetitiveRankRecordAdmin(admin.ModelAdmin):
+    list_display = (
+        "mode",
+        "rank_tier",
+        "division",
+        "season",
+        "recorded_at",
+    )
+    list_filter = (
+        "mode",
+        "rank_tier",
+        "season",
+    )
+    search_fields = (
+        "mode__name",
+        "mode__library_entry__game__title",
+        "rank_tier__name",
+        "season",
+    )
+    date_hierarchy = "recorded_at"
+    ordering = (
+        "-recorded_at",
+        "-pk",
+    )
+
+

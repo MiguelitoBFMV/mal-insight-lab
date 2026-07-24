@@ -1,9 +1,10 @@
 from io import StringIO
 from decimal import Decimal
-from datetime import date
+from datetime import date, timedelta
 
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
@@ -11,6 +12,9 @@ from django.utils import timezone
 
 from games.forms import IGDBNewGameImportForm
 from games.models import (
+    CompetitiveMode,
+    CompetitiveRankRecord,
+    CompetitiveRankTier,
     Franchise,
     Game,
     GameAccess,
@@ -3790,3 +3794,994 @@ class GameKirokuCompletedImportTests(TestCase):
             "No completed entries require backfill.",
             second_output.getvalue(),
         )
+
+
+class GameKirokuCompetitiveRankTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.owner = get_user_model().objects.create_user(
+            username="competitive-owner",
+            password="test-password",
+        )
+
+        cls.game = Game.objects.create(
+            title="Rocket League",
+        )
+        cls.entry = LibraryEntry.objects.create(
+            game=cls.game,
+            status=LibraryEntry.Status.MULTIPLAYER,
+        )
+
+        cls.mode = CompetitiveMode.objects.create(
+            library_entry=cls.entry,
+            name="2v2",
+            display_order=20,
+            is_active=True,
+        )
+        cls.tier = CompetitiveRankTier.objects.create(
+            library_entry=cls.entry,
+            name="Champion I",
+            rank_order=160,
+            uses_divisions=True,
+            division_count=4,
+        )
+
+        cls.other_game = Game.objects.create(
+            title="Battlefield REDSEC",
+        )
+        cls.other_entry = LibraryEntry.objects.create(
+            game=cls.other_game,
+            status=LibraryEntry.Status.MULTIPLAYER,
+        )
+        cls.other_mode = CompetitiveMode.objects.create(
+            library_entry=cls.other_entry,
+            name="Ranked Battle Royale",
+            display_order=10,
+            is_active=True,
+        )
+        cls.other_tier = CompetitiveRankTier.objects.create(
+            library_entry=cls.other_entry,
+            name="Gold",
+            rank_order=40,
+            uses_divisions=True,
+            division_count=5,
+        )
+
+    def create_record(
+        self,
+        *,
+        mode=None,
+        tier=None,
+        division=1,
+        recorded_at=None,
+        season="Season 23",
+        notes="",
+    ):
+        return CompetitiveRankRecord.objects.create(
+            mode=mode or self.mode,
+            rank_tier=tier or self.tier,
+            division=division,
+            season=season,
+            recorded_at=recorded_at or timezone.now(),
+            notes=notes,
+        )
+
+    def create_mode_url(self):
+        return reverse(
+            "games:create_competitive_mode",
+            kwargs={
+                "slug": self.game.slug,
+            },
+        )
+
+    def create_tier_url(self):
+        return reverse(
+            "games:create_competitive_tier",
+            kwargs={
+                "slug": self.game.slug,
+            },
+        )
+
+    def create_record_url(self):
+        return reverse(
+            "games:create_competitive_record",
+            kwargs={
+                "slug": self.game.slug,
+            },
+        )
+
+    def update_mode_url(self, mode=None):
+        selected_mode = mode or self.mode
+
+        return reverse(
+            "games:update_competitive_mode",
+            kwargs={
+                "slug": self.game.slug,
+                "mode_id": selected_mode.pk,
+            },
+        )
+
+    def delete_mode_url(self, mode=None):
+        selected_mode = mode or self.mode
+
+        return reverse(
+            "games:delete_competitive_mode",
+            kwargs={
+                "slug": self.game.slug,
+                "mode_id": selected_mode.pk,
+            },
+        )
+
+    def delete_tier_url(self, tier=None):
+        selected_tier = tier or self.tier
+
+        return reverse(
+            "games:delete_competitive_tier",
+            kwargs={
+                "slug": self.game.slug,
+                "tier_id": selected_tier.pk,
+            },
+        )
+
+    def update_record_url(self, record):
+        return reverse(
+            "games:update_competitive_record",
+            kwargs={
+                "slug": self.game.slug,
+                "record_id": record.pk,
+            },
+        )
+
+    def delete_record_url(self, record):
+        return reverse(
+            "games:delete_competitive_record",
+            kwargs={
+                "slug": self.game.slug,
+                "record_id": record.pk,
+            },
+        )
+
+    def timestamp_value(self, value):
+        return timezone.localtime(value).strftime(
+            "%Y-%m-%dT%H:%M"
+        )
+
+    def test_competitive_ranking_is_public_but_controls_are_private(
+        self,
+    ):
+        self.create_record(
+            division=2,
+        )
+
+        response = self.client.get(
+            self.game.get_absolute_url()
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "Competitive Ranking",
+        )
+        self.assertContains(
+            response,
+            "2v2",
+        )
+        self.assertContains(
+            response,
+            "Champion I",
+        )
+        self.assertContains(
+            response,
+            "<p>Division II</p>",
+            html=True,
+        )
+        self.assertNotContains(
+            response,
+            "Competitive Setup",
+        )
+
+    def test_latest_record_is_current_rank(self):
+        first_time = timezone.now()
+        second_time = first_time + timedelta(
+            minutes=5,
+        )
+
+        self.create_record(
+            division=1,
+            recorded_at=first_time,
+        )
+        latest_record = self.create_record(
+            division=4,
+            recorded_at=second_time,
+        )
+
+        self.assertEqual(
+            self.mode.current_rank_record,
+            latest_record,
+        )
+
+    def test_record_rejects_division_above_tier_limit(
+        self,
+    ):
+        record = CompetitiveRankRecord(
+            mode=self.mode,
+            rank_tier=self.tier,
+            division=5,
+        )
+
+        with self.assertRaises(ValidationError):
+            record.full_clean()
+
+    def test_rank_without_divisions_rejects_division(
+        self,
+    ):
+        unranked = CompetitiveRankTier.objects.create(
+            library_entry=self.entry,
+            name="Unranked",
+            rank_order=0,
+            uses_divisions=False,
+            division_count=None,
+        )
+
+        record = CompetitiveRankRecord(
+            mode=self.mode,
+            rank_tier=unranked,
+            division=1,
+        )
+
+        with self.assertRaises(ValidationError):
+            record.full_clean()
+
+    def test_record_rejects_tier_from_another_game(
+        self,
+    ):
+        record = CompetitiveRankRecord(
+            mode=self.mode,
+            rank_tier=self.other_tier,
+            division=1,
+        )
+
+        with self.assertRaises(ValidationError):
+            record.full_clean()
+
+    def test_anonymous_creation_redirects_to_login(
+        self,
+    ):
+        response = self.client.post(
+            self.create_mode_url(),
+            {
+                "new-competitive-mode-name": "1v1",
+                "new-competitive-mode-display_order": "10",
+                "new-competitive-mode-is_active": "on",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(
+            reverse("login"),
+            response.url,
+        )
+        self.assertFalse(
+            CompetitiveMode.objects.filter(
+                library_entry=self.entry,
+                name="1v1",
+            ).exists()
+        )
+
+    def test_authenticated_get_to_mutation_route_returns_405(
+        self,
+    ):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(
+            self.create_record_url()
+        )
+
+        self.assertEqual(response.status_code, 405)
+
+    def test_owner_can_create_competitive_mode(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            self.create_mode_url(),
+            {
+                "new-competitive-mode-name": "1v1",
+                "new-competitive-mode-display_order": "10",
+                "new-competitive-mode-is_active": "on",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            self.game.get_absolute_url(),
+        )
+
+        created_mode = CompetitiveMode.objects.get(
+            library_entry=self.entry,
+            name="1v1",
+        )
+
+        self.assertEqual(
+            created_mode.display_order,
+            10,
+        )
+        self.assertTrue(
+            created_mode.is_active
+        )
+
+    def test_owner_can_create_competitive_tier(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            self.create_tier_url(),
+            {
+                "new-competitive-tier-name": (
+                    "Diamond III"
+                ),
+                "new-competitive-tier-rank_order": (
+                    "150"
+                ),
+                "new-competitive-tier-uses_divisions": (
+                    "on"
+                ),
+                "new-competitive-tier-division_count": (
+                    "4"
+                ),
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            self.game.get_absolute_url(),
+        )
+
+        created_tier = (
+            CompetitiveRankTier.objects.get(
+                library_entry=self.entry,
+                name="Diamond III",
+            )
+        )
+
+        self.assertEqual(
+            created_tier.rank_order,
+            150,
+        )
+        self.assertEqual(
+            created_tier.division_count,
+            4,
+        )
+
+    def test_owner_can_create_rank_record(self):
+        self.client.force_login(self.owner)
+
+        recorded_at = timezone.now().replace(
+            second=0,
+            microsecond=0,
+        )
+
+        response = self.client.post(
+            self.create_record_url(),
+            {
+                "new-competitive-record-mode": str(
+                    self.mode.pk
+                ),
+                "new-competitive-record-rank_tier": str(
+                    self.tier.pk
+                ),
+                "new-competitive-record-division": "3",
+                "new-competitive-record-season": (
+                    "Season 23"
+                ),
+                "new-competitive-record-recorded_at": (
+                    self.timestamp_value(
+                        recorded_at
+                    )
+                ),
+                "new-competitive-record-notes": (
+                    "Promotion match."
+                ),
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            self.game.get_absolute_url(),
+        )
+
+        record = CompetitiveRankRecord.objects.get(
+            mode=self.mode,
+        )
+
+        self.assertEqual(
+            record.rank_tier,
+            self.tier,
+        )
+        self.assertEqual(
+            record.division,
+            3,
+        )
+        self.assertEqual(
+            record.season,
+            "Season 23",
+        )
+        self.assertEqual(
+            record.notes,
+            "Promotion match.",
+        )
+
+    def test_owner_can_update_rank_record(self):
+        record = self.create_record(
+            division=1,
+        )
+        new_time = timezone.now().replace(
+            second=0,
+            microsecond=0,
+        )
+
+        self.client.force_login(self.owner)
+
+        prefix = (
+            f"competitive-record-{record.pk}"
+        )
+
+        response = self.client.post(
+            self.update_record_url(record),
+            {
+                f"{prefix}-mode": str(
+                    self.mode.pk
+                ),
+                f"{prefix}-rank_tier": str(
+                    self.tier.pk
+                ),
+                f"{prefix}-division": "3",
+                f"{prefix}-season": "Season 24",
+                f"{prefix}-recorded_at": (
+                    self.timestamp_value(
+                        new_time
+                    )
+                ),
+                f"{prefix}-notes": (
+                    "Updated placement."
+                ),
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            self.game.get_absolute_url(),
+        )
+
+        record.refresh_from_db()
+
+        self.assertEqual(
+            record.division,
+            3,
+        )
+        self.assertEqual(
+            record.season,
+            "Season 24",
+        )
+        self.assertEqual(
+            record.notes,
+            "Updated placement.",
+        )
+
+    def test_deleting_latest_record_restores_previous_rank(
+        self,
+    ):
+        first_time = timezone.now()
+        second_time = first_time + timedelta(
+            minutes=10,
+        )
+
+        previous_record = self.create_record(
+            division=2,
+            recorded_at=first_time,
+        )
+        latest_record = self.create_record(
+            division=4,
+            recorded_at=second_time,
+        )
+
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            self.delete_record_url(
+                latest_record
+            )
+        )
+
+        self.assertRedirects(
+            response,
+            self.game.get_absolute_url(),
+        )
+        self.assertFalse(
+            CompetitiveRankRecord.objects.filter(
+                pk=latest_record.pk,
+            ).exists()
+        )
+        self.assertEqual(
+            self.mode.current_rank_record,
+            previous_record,
+        )
+
+    def test_archived_mode_is_excluded_from_new_updates(
+        self,
+    ):
+        self.client.force_login(self.owner)
+
+        prefix = (
+            f"competitive-mode-{self.mode.pk}"
+        )
+
+        response = self.client.post(
+            self.update_mode_url(),
+            {
+                f"{prefix}-name": self.mode.name,
+                f"{prefix}-display_order": "20",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            self.game.get_absolute_url(),
+        )
+
+        self.mode.refresh_from_db()
+
+        self.assertFalse(
+            self.mode.is_active
+        )
+
+        detail_response = self.client.get(
+            self.game.get_absolute_url()
+        )
+
+        mode_queryset = (
+            detail_response.context[
+                "competitive_record_form"
+            ]
+            .fields["mode"]
+            .queryset
+        )
+
+        self.assertNotIn(
+            self.mode,
+            mode_queryset,
+        )
+
+    def test_mode_with_history_cannot_be_deleted(
+        self,
+    ):
+        self.create_record()
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            self.delete_mode_url()
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+        self.assertContains(
+            response,
+            (
+                "This mode has rank history and "
+                "cannot be deleted."
+            ),
+        )
+        self.assertTrue(
+            CompetitiveMode.objects.filter(
+                pk=self.mode.pk,
+            ).exists()
+        )
+
+    def test_empty_mode_can_be_deleted(self):
+        empty_mode = CompetitiveMode.objects.create(
+            library_entry=self.entry,
+            name="Test Mode",
+            display_order=99,
+            is_active=True,
+        )
+
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            self.delete_mode_url(
+                mode=empty_mode,
+            )
+        )
+
+        self.assertRedirects(
+            response,
+            self.game.get_absolute_url(),
+        )
+        self.assertFalse(
+            CompetitiveMode.objects.filter(
+                pk=empty_mode.pk,
+            ).exists()
+        )
+
+    def test_tier_with_history_cannot_be_deleted(
+        self,
+    ):
+        self.create_record()
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            self.delete_tier_url()
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+        self.assertContains(
+            response,
+            (
+                "This rank is used by the history "
+                "and cannot be deleted."
+            ),
+        )
+        self.assertTrue(
+            CompetitiveRankTier.objects.filter(
+                pk=self.tier.pk,
+            ).exists()
+        )
+
+    def test_empty_tier_can_be_deleted(self):
+        empty_tier = (
+            CompetitiveRankTier.objects.create(
+                library_entry=self.entry,
+                name="Temporary Rank",
+                rank_order=999,
+                uses_divisions=False,
+                division_count=None,
+            )
+        )
+
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            self.delete_tier_url(
+                tier=empty_tier,
+            )
+        )
+
+        self.assertRedirects(
+            response,
+            self.game.get_absolute_url(),
+        )
+        self.assertFalse(
+            CompetitiveRankTier.objects.filter(
+                pk=empty_tier.pk,
+            ).exists()
+        )
+
+    def test_foreign_record_cannot_be_updated_through_game(
+        self,
+    ):
+        foreign_record = self.create_record(
+            mode=self.other_mode,
+            tier=self.other_tier,
+            division=2,
+        )
+
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            reverse(
+                "games:update_competitive_record",
+                kwargs={
+                    "slug": self.game.slug,
+                    "record_id": foreign_record.pk,
+                },
+            ),
+            {},
+        )
+
+        self.assertEqual(
+            response.status_code,
+            404,
+        )
+        self.assertTrue(
+            CompetitiveRankRecord.objects.filter(
+                pk=foreign_record.pk,
+            ).exists()
+        )
+
+    def test_only_selected_tier_builds_owner_form(
+        self,
+    ):
+        second_tier = (
+            CompetitiveRankTier.objects.create(
+                library_entry=self.entry,
+                name="Diamond III",
+                rank_order=150,
+                uses_divisions=True,
+                division_count=4,
+            )
+        )
+
+        self.client.force_login(self.owner)
+
+        regular_response = self.client.get(
+            self.game.get_absolute_url()
+        )
+
+        regular_tiers = (
+            regular_response.context[
+                "competitive_rank_tiers"
+            ]
+        )
+
+        self.assertTrue(
+            all(
+                tier.owner_form is None
+                for tier in regular_tiers
+            )
+        )
+
+        managed_response = self.client.get(
+            self.game.get_absolute_url(),
+            {
+                "manage_tier": self.tier.pk,
+            },
+        )
+
+        managed_tiers = (
+            managed_response.context[
+                "competitive_rank_tiers"
+            ]
+        )
+
+        selected_tier = next(
+            tier
+            for tier in managed_tiers
+            if tier.pk == self.tier.pk
+        )
+        unselected_tier = next(
+            tier
+            for tier in managed_tiers
+            if tier.pk == second_tier.pk
+        )
+
+        self.assertTrue(
+            selected_tier.is_managed
+        )
+        self.assertIsNotNone(
+            selected_tier.owner_form
+        )
+        self.assertFalse(
+            unselected_tier.is_managed
+        )
+        self.assertIsNone(
+            unselected_tier.owner_form
+        )
+
+
+class GameKirokuCompetitivePresetCommandTests(
+    TestCase
+):
+    @classmethod
+    def setUpTestData(cls):
+        cls.rocket_league = Game.objects.create(
+            title="Rocket League",
+        )
+        cls.rocket_entry = (
+            LibraryEntry.objects.create(
+                game=cls.rocket_league,
+                status=(
+                    LibraryEntry.Status.MULTIPLAYER
+                ),
+            )
+        )
+
+        cls.battlefield = Game.objects.create(
+            title="Battlefield 6",
+        )
+        cls.battlefield_entry = (
+            LibraryEntry.objects.create(
+                game=cls.battlefield,
+                status=(
+                    LibraryEntry.Status.MULTIPLAYER
+                ),
+            )
+        )
+
+    def run_preset(
+        self,
+        *,
+        game,
+        preset,
+        dry_run=False,
+    ):
+        output = StringIO()
+
+        call_command(
+            "setup_competitive_presets",
+            game=game,
+            preset=preset,
+            dry_run=dry_run,
+            stdout=output,
+        )
+
+        return output.getvalue()
+
+    def test_dry_run_does_not_write_changes(
+        self,
+    ):
+        output = self.run_preset(
+            game="Rocket League",
+            preset="rocket-league",
+            dry_run=True,
+        )
+
+        self.assertIn(
+            "Dry run",
+            output,
+        )
+        self.assertFalse(
+            CompetitiveMode.objects.filter(
+                library_entry=self.rocket_entry,
+            ).exists()
+        )
+        self.assertFalse(
+            CompetitiveRankTier.objects.filter(
+                library_entry=self.rocket_entry,
+            ).exists()
+        )
+
+    def test_rocket_league_preset_is_idempotent(
+        self,
+    ):
+        self.run_preset(
+            game="Rocket League",
+            preset="rocket-league",
+        )
+        self.run_preset(
+            game="Rocket League",
+            preset="rocket-league",
+        )
+
+        modes = CompetitiveMode.objects.filter(
+            library_entry=self.rocket_entry,
+        )
+        tiers = (
+            CompetitiveRankTier.objects.filter(
+                library_entry=self.rocket_entry,
+            )
+        )
+
+        self.assertEqual(
+            modes.count(),
+            3,
+        )
+        self.assertEqual(
+            tiers.count(),
+            23,
+        )
+        self.assertSetEqual(
+            set(
+                modes.values_list(
+                    "name",
+                    flat=True,
+                )
+            ),
+            {
+                "1V1",
+                "2V2",
+                "3V3",
+            },
+        )
+        self.assertTrue(
+            tiers.filter(
+                name="Supersonic Legend",
+            ).exists()
+        )
+
+    def test_preset_normalizes_existing_tier_without_losing_history(
+        self,
+    ):
+        mode = CompetitiveMode.objects.create(
+            library_entry=self.rocket_entry,
+            name="2V2",
+            display_order=20,
+            is_active=True,
+        )
+        tier = (
+            CompetitiveRankTier.objects.create(
+                library_entry=self.rocket_entry,
+                name="Champion I",
+                rank_order=140,
+                uses_divisions=True,
+                division_count=4,
+            )
+        )
+        record = (
+            CompetitiveRankRecord.objects.create(
+                mode=mode,
+                rank_tier=tier,
+                division=2,
+                season="Season 23",
+                recorded_at=timezone.now(),
+            )
+        )
+
+        original_tier_id = tier.pk
+
+        self.run_preset(
+            game="Rocket League",
+            preset="rocket-league",
+        )
+
+        tier.refresh_from_db()
+        record.refresh_from_db()
+
+        self.assertEqual(
+            tier.pk,
+            original_tier_id,
+        )
+        self.assertEqual(
+            tier.rank_order,
+            160,
+        )
+        self.assertEqual(
+            record.rank_tier_id,
+            original_tier_id,
+        )
+        self.assertEqual(
+            record.division,
+            2,
+        )
+
+    def test_redsec_preset_is_added_to_battlefield_6(
+        self,
+    ):
+        self.run_preset(
+            game="Battlefield 6",
+            preset="redsec",
+        )
+
+        self.assertTrue(
+            CompetitiveMode.objects.filter(
+                library_entry=(
+                    self.battlefield_entry
+                ),
+                name="Ranked Battle Royale",
+            ).exists()
+        )
+        self.assertEqual(
+            CompetitiveRankTier.objects.filter(
+                library_entry=(
+                    self.battlefield_entry
+                ),
+            ).count(),
+            9,
+        )
+        self.assertTrue(
+            CompetitiveRankTier.objects.filter(
+                library_entry=(
+                    self.battlefield_entry
+                ),
+                name="Bronze",
+                division_count=5,
+            ).exists()
+        )
+        self.assertFalse(
+            Game.objects.filter(
+                title="Battlefield REDSEC",
+            ).exists()
+        )
+
+    def test_missing_game_returns_command_error(
+        self,
+    ):
+        with self.assertRaises(CommandError):
+            self.run_preset(
+                game="Missing Game",
+                preset="rocket-league",
+            )
+
+
