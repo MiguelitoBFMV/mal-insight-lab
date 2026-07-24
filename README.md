@@ -28,7 +28,7 @@ The application currently runs locally and uses Supabase PostgreSQL as its share
 
 The anime side of MAL Insights is functionally stable and includes automatic MyAnimeList OAuth renewal, optimized synchronization workflows, manual rescue support for entries omitted by the MAL list API, and unified Episode Signals for normal and manually rescued entries.
 
-Game Kiroku now includes its local-first IGDB workflow, additional-content tracking, a dedicated Platinum Collection, and public franchise views with authenticated owner management. Its MVP is nearing completion, with competitive-rank tracking and final hardening remaining.
+Game Kiroku has completed its MVP. The module now combines a local-first IGDB workflow, replay-aware playthrough history, additional-content tracking, a dedicated Platinum Collection, franchise timelines, completed-import history, and configurable competitive-rank tracking.
 
 The platform supports two access levels:
 
@@ -85,9 +85,9 @@ Route:
 
 ### Game Kiroku / ゲーム記録
 
-Status: **Available — MVP nearing completion**
+Status: **Available — MVP complete**
 
-Game Kiroku is the video game library, playthrough, access, platinum, franchise, and additional-content tracking module.
+Game Kiroku is the video game library, playthrough, access, platinum, franchise, additional-content, and competitive-rank tracking module.
 
 Current features include:
 
@@ -102,8 +102,11 @@ Current features include:
 - Manual status control for games without playthrough history.
 - Playthrough-driven status synchronization when playthrough history exists.
 - Multiple playthroughs per game.
+- Automatic creation of `Playthrough 1` when a newly imported game starts as Completed.
+- Historical backfill support for completed entries that predate automatic playthrough creation.
 - Text language, platform access, progress, dates, notes, and hours per playthrough.
-- Owned and Wishlist access records by platform and storefront.
+- `Unspecified` as a valid historical language fallback when the original language is unknown.
+- Owned and Wishlist access records by platform and storefront, including Xbox / Game Pass as a store option.
 - Owner controls for creating, editing, and deleting eligible access records.
 - Historical protection for accesses already referenced by playthroughs.
 - Main-story duration from IGDB with manual override support.
@@ -133,8 +136,18 @@ Current features include:
 - IGDB detection of `dlcs`, `expansions`, `standalone_expansions`, and `parent_game` relationships.
 - Choice to track detected content under its parent game or review it as a separate library game.
 - Status, optional completion date, notes, synopsis, cover, release date, and raw IGDB payload for tracked additional content.
+- Configurable competitive modes per game, such as Rocket League `1V1`, `2V2`, and `3V3`.
+- Game-specific rank tiers with optional division systems.
+- Timestamped competitive-rank history with season, rank, division, notes, and multiple updates on the same day.
+- Current rank derived from the latest historical record instead of a separately overwritten field.
+- Roman-numeral division display and per-tier maximum-division validation.
+- Safe editing and deletion of rank records, with automatic fallback to the previous current rank.
+- Mode archiving that preserves history while removing archived modes from new-record forms.
+- Protected deletion of modes and tiers already referenced by rank history.
+- Idempotent competitive presets for Rocket League and REDSEC inside Battlefield 6.
+- Lazy tier management that renders only the selected tier editor on large configurations.
 - Public read-only mode and owner-only write actions.
-- Automated model, route, permission, dashboard, library, detail, platinum, franchise, playthrough, access, and form tests.
+- Automated model, route, permission, dashboard, library, detail, platinum, franchise, playthrough, access, completed-import, competitive-ranking, preset-command, and form tests.
 
 IGDB is treated as an import and enrichment source. Normal Game Kiroku pages read from Supabase and do not contact IGDB automatically. Search, import, linking, and refresh operations happen only after an explicit owner action.
 
@@ -310,6 +323,9 @@ mvs-tracker/
 │   └── views.py
 │
 ├── games/
+│   ├── management/commands/
+│   │   ├── backfill_completed_playthroughs.py
+│   │   └── setup_competitive_presets.py
 │   ├── migrations/
 │   ├── services/
 │   │   ├── igdb_client.py
@@ -471,6 +487,49 @@ The rescue command creates or updates the local anime entry, stores a persistent
 
 After the initial rescue, normal progress updates for active rescued anime are handled by **Sync Signals**.
 
+## Game Kiroku Maintenance Commands
+
+### Backfill completed playthrough history
+
+Preview completed entries that still lack playthrough history:
+
+```bash
+python manage.py backfill_completed_playthroughs --dry-run
+```
+
+Create one completed historical playthrough for every eligible entry:
+
+```bash
+python manage.py backfill_completed_playthroughs
+```
+
+The command is idempotent. Entries that already have playthroughs are skipped.
+
+### Install competitive presets
+
+Preview or apply the Rocket League configuration:
+
+```bash
+python manage.py setup_competitive_presets \
+  --game "Rocket League" \
+  --preset rocket-league \
+  --dry-run
+
+python manage.py setup_competitive_presets \
+  --game "Rocket League" \
+  --preset rocket-league
+```
+
+Apply REDSEC ranks to the existing Battlefield 6 library entry:
+
+```bash
+python manage.py setup_competitive_presets \
+  --game "Battlefield 6" \
+  --preset redsec
+```
+
+The preset command preserves existing history, creates missing modes and tiers, normalizes preset ordering, supports dry runs, and can be executed repeatedly without creating duplicates.
+
 ## Running Tests
 
 MVS Tracker uses an isolated SQLite in-memory database for automated tests.
@@ -486,7 +545,7 @@ python manage.py test \
 
 The test database is created and destroyed automatically. It does not modify Supabase.
 
-At the current project checkpoint, the automated suite contains **126 passing tests**.
+At the current project checkpoint, the automated suite contains **158 passing tests**.
 
 The MAL Insights regression suite covers:
 
@@ -509,6 +568,12 @@ The Game Kiroku regression suite covers:
 - Playthrough creation, editing, transitions, numbering, dates, and access validation.
 - Access creation, editing, duplicate prevention, historical locking, and safe deletion.
 - IGDB import-form validation and franchise selection.
+- Automatic completed-playthrough creation during IGDB import.
+- Historical completed-playthrough backfill and dry-run behavior.
+- Competitive mode, tier, record, division, ordering, and cross-game validation.
+- Owner-only competitive CRUD, archived-mode behavior, protected deletion, and current-rank fallback.
+- Lazy tier-editor rendering for large configurations.
+- Rocket League and REDSEC preset creation, normalization, dry runs, history preservation, and idempotence.
 
 ## Data Sources
 
@@ -599,10 +664,12 @@ Planned primary listening-data source for the music module. Music will be the fi
 - [x] Add franchise logos and dynamic representative artwork.
 - [x] Add franchise creation, editing, safe deletion, and game assignment.
 - [x] Add reversible franchise release-timeline ordering.
-- [ ] Add manual competitive-rank tracking per game and mode.
-- [ ] Add safe deletion for complete library entries.
-- [ ] Complete the final responsive, empty-state, navigation, and documentation review.
-- [ ] Mark the Game Kiroku MVP as complete.
+- [x] Add manual competitive-rank tracking per game and mode.
+- [x] Add completed-import playthrough creation and historical backfill.
+- [x] Add competitive presets for Rocket League and REDSEC.
+- [x] Complete the final responsive, empty-state, navigation, and documentation review.
+- [x] Mark the Game Kiroku MVP as complete.
+- [ ] Add an optional full-entry deletion workflow after the MVP.
 - [ ] Expand game analytics after the MVP.
 - [ ] Connect Game Kiroku activity to Hibi Log.
 
