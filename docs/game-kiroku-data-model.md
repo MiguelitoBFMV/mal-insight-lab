@@ -1,95 +1,116 @@
-# Game Kiroku — Modelo de datos y arquitectura del MVP
+# Game Kiroku — MVP Data Model and Architecture
 
-Este documento describe el estado implementado de **Game Kiroku / ゲーム記録** dentro de MVS Tracker.
+This document describes the implemented state of **Game Kiroku / ゲーム記録** inside MVS Tracker.
 
-Ya no corresponde a un diseño previo a migraciones. La arquitectura aquí documentada refleja el módulo operativo en el punto de control actual, con esquema aplicado hasta `games.0007_franchise_logo_url` y una suite global de **126 pruebas aprobadas**.
+It is no longer a pre-migration design document. The architecture documented here reflects the operational module with the schema applied through `games.0011` and a global suite of **158 passing tests**.
 
-El MVP se encuentra en su etapa final. Los grandes bloques ya implementados son:
+The MVP is complete. Its implemented functional areas are:
 
-- Biblioteca personal.
-- Wishlist y propiedad por plataforma.
-- Playthroughs y replays.
-- Accesos y tiendas.
-- Metadatos locales importados desde IGDB.
-- Contenido adicional.
+- Personal video game library.
+- Owned and Wishlist access by platform and store.
+- Playthroughs, replays, and historical completion records.
+- Automatic playthrough creation for games imported as Completed.
+- Idempotent backfill for older completed entries.
+- Local-first IGDB metadata.
+- Additional content tracking.
 - Platinum Collection.
-- Franquicias y cronologías.
-- Acceso público de solo lectura.
-- Administración privada desde la propia interfaz.
-
-Los bloques restantes para declarar el MVP completo son Competitive Rank Tracking y el hardening final.
-
----
-
-## 1. Principios de arquitectura
-
-Game Kiroku sigue estos principios:
-
-- Los metadatos externos se importan y almacenan localmente.
-- IGDB no es una dependencia necesaria para cargar páginas normales.
-- Los datos de la obra se separan de la relación personal con ella.
-- Una obra no se duplica por plataforma.
-- La propiedad y la wishlist se expresan mediante accesos.
-- Los playthroughs representan recorridos individuales.
-- El progreso es opcional y manual.
-- El platino pertenece a la entrada personal completa, no a una plataforma.
-- Las franquicias se organizan manualmente.
-- El MVP trabaja con una única biblioteca personal.
-- Los modelos de Game Kiroku no se relacionan con `User`.
-- La autenticación determina quién puede escribir.
-- Las vistas públicas son de solo lectura.
-- Las acciones mutables requieren normalmente login, POST y CSRF.
-- Los GET normales no producen sincronizaciones ni escrituras ocultas.
+- Franchise management and release timelines.
+- Competitive Rank Tracking.
+- Idempotent competitive presets.
+- Public read-only access.
+- Authenticated owner management.
+- Automated hardening through 158 tests.
 
 ---
 
-## 2. Modelo conceptual implementado
+## 1. Architecture Principles
+
+Game Kiroku follows these principles:
+
+- External metadata is imported and stored locally.
+- IGDB is not required to render ordinary pages.
+- Work metadata is separated from the user's personal relationship with that work.
+- A game is not duplicated by platform.
+- Ownership and Wishlist intent are represented through access records.
+- Playthroughs represent individual runs.
+- Progress is optional and manually recorded.
+- Platinum status belongs to the full personal library entry, not to one platform.
+- Franchises are organised manually.
+- Competitive ranks are configured per game.
+- Current competitive rank is derived from rank history.
+- The MVP operates as one personal library.
+- Game Kiroku models are not directly related to `User`.
+- Authentication determines who can write.
+- Public views are read-only.
+- Mutating actions normally require login, POST, and CSRF.
+- Normal GET requests do not trigger hidden synchronisation or writes.
+
+---
+
+## 2. Implemented Conceptual Model
 
 ```text
 Franchise
     └── Game
           └── LibraryEntry
                 ├── GameAccess
-                │      └── Playthrough opcionalmente
+                │      └── Playthrough optionally
                 ├── Playthrough
-                └── GameContent
+                ├── GameContent
+                ├── CompetitiveMode
+                │      └── CompetitiveRankRecord
+                └── CompetitiveRankTier
+
+CompetitiveRankRecord
+    └── CompetitiveRankTier
 ```
 
-### Responsabilidad de cada entidad
+### Entity Responsibilities
 
 ```text
 Franchise
-    Agrupa manualmente juegos de una misma saga y define
-    su identidad visual.
+    Manually groups games from the same series and
+    defines the franchise's visual identity.
 
 Game
-    Representa el videojuego como obra y almacena
-    metadatos locales o importados desde IGDB.
+    Represents the video game as a work and stores
+    local or IGDB-imported metadata.
 
 LibraryEntry
-    Representa la relación personal con el videojuego.
+    Represents the user's personal relationship
+    with one game.
 
 GameAccess
-    Representa dónde se posee o se desea adquirir
-    el videojuego.
+    Represents where the game is owned or where the
+    user wants to acquire it.
 
 Playthrough
-    Representa cada recorrido individual realizado
-    sobre el videojuego.
+    Represents one individual run of the game.
 
 GameContent
-    Representa DLC, expansiones y otros contenidos
-    relacionados que no necesitan convertirse en
-    juegos independientes de la biblioteca.
+    Represents DLC, expansions, and related content
+    that should not count as independent library games.
+
+CompetitiveMode
+    Represents one competitive queue, mode, or discipline
+    within a library entry.
+
+CompetitiveRankTier
+    Defines the rank scale and optional division system
+    for one game.
+
+CompetitiveRankRecord
+    Records each historical rank update with timestamp,
+    season, division, and notes.
 ```
 
 ---
 
 ## 3. Franchise
 
-`Franchise` agrupa manualmente juegos de una misma saga.
+`Franchise` manually groups games from the same series.
 
-Ejemplos reales:
+Examples:
 
 - Assassin's Creed.
 - Yakuza / Like a Dragon.
@@ -98,46 +119,46 @@ Ejemplos reales:
 - Ratchet & Clank.
 - Grand Theft Auto.
 
-Un juego puede pertenecer a una franquicia o quedar sin agrupar.
+A game may belong to one franchise or remain unassigned.
 
-### Campos implementados
+### Implemented Fields
 
-| Campo | Tipo | Nulo / vacío | Descripción |
+| Field | Type | Nullable / blank | Description |
 |---|---|---:|---|
-| `name` | `CharField` | No | Nombre visible y único. |
-| `slug` | `SlugField` | No | Identificador estable y único para URL. |
-| `description` | `TextField` | Sí | Descripción opcional. |
-| `logo_url` | `URLField` | Sí | Logo o imagen representativa opcional. |
-| `display_order` | `PositiveIntegerField` | No | Orden manual. |
-| `created_at` | `DateTimeField` | No | Fecha de creación. |
-| `updated_at` | `DateTimeField` | No | Última modificación. |
+| `name` | `CharField` | No | Unique visible name. |
+| `slug` | `SlugField` | No | Stable unique URL identifier. |
+| `description` | `TextField` | Yes | Optional description. |
+| `logo_url` | `URLField` | Yes | Optional representative logo or image. |
+| `display_order` | `PositiveIntegerField` | No | Manual ordering value. |
+| `created_at` | `DateTimeField` | No | Creation timestamp. |
+| `updated_at` | `DateTimeField` | No | Last modification timestamp. |
 
-### Reglas
+### Rules
 
-- `name` es único.
-- `slug` es único.
-- El slug se genera una sola vez y se conserva aunque cambie el nombre visible.
-- La relación con `Game` es opcional.
-- Una franquicia vacía puede eliminarse.
-- Una franquicia con juegos asignados no puede eliminarse.
-- El owner puede ver y administrar franquicias vacías.
-- Los visitantes solo ven franquicias que ya contienen juegos.
+- `name` is unique.
+- `slug` is unique.
+- The slug is generated once and remains stable after visible name changes.
+- The relationship from `Game` is optional.
+- An empty franchise can be deleted.
+- A franchise with assigned games cannot be deleted.
+- The owner can view and manage empty franchises.
+- Anonymous visitors only see franchises that contain games.
 
-### Identidad visual
+### Visual Identity
 
-La franquicia puede tener un `logo_url` manual.
+A franchise may define a manual `logo_url`.
 
-El fondo se deriva automáticamente de un juego representativo. Se usa:
+Its background is derived from a representative game:
 
 ```text
 artwork_url
-    si existe
+    when available
 
 cover_url
-    como fallback
+    as fallback
 ```
 
-La prioridad de estado para elegir el juego representativo es:
+Representative-game status priority:
 
 ```text
 1. Playing
@@ -148,72 +169,72 @@ La prioridad de estado para elegir el juego representativo es:
 6. Dropped
 ```
 
-Cuando varios juegos comparten prioridad, se prefiere el actualizado más recientemente.
+When several games share the same priority, the most recently updated one is preferred.
 
-### Vistas
+### Routes
 
 ```text
 /games/franchises/
 /games/franchises/<slug>/
 ```
 
-La ficha muestra:
+The franchise detail page includes:
 
-- Hero con imagen dinámica.
-- Logo opcional.
-- Descripción.
-- Juego representativo.
-- Progreso porcentual.
-- Total, Owned, Active, Plan to Play, Completed y Platinum.
-- Cronología por lanzamiento.
-- Orden antiguo → nuevo o nuevo → antiguo.
-- `Add Game` para volver a Library.
-- Controles privados de edición.
+- Dynamic hero image.
+- Optional logo.
+- Description.
+- Representative game.
+- Completion percentage.
+- Total, Owned, Active, Plan to Play, Completed, and Platinum metrics.
+- Release timeline.
+- Oldest-to-newest and newest-to-oldest ordering.
+- `Add Game` navigation back to Library.
+- Authenticated owner controls.
 
 ---
 
 ## 4. Game
 
-`Game` representa el videojuego como obra.
+`Game` represents the video game as a work.
 
-No contiene estados personales como Playing, Completed o Wishlist.
+It does not contain personal states such as Playing, Completed, or Wishlist.
 
-### Campos implementados
+### Implemented Fields
 
-| Campo | Tipo | Nulo / vacío | Descripción |
+| Field | Type | Nullable / blank | Description |
 |---|---|---:|---|
-| `igdb_id` | `PositiveBigIntegerField` | Sí | Identificador externo único de IGDB. |
-| `title` | `CharField` | No | Título principal. |
-| `title_japanese` | `CharField` | Sí | Título japonés opcional. |
-| `slug` | `SlugField` | No | Identificador local estable y único. |
-| `summary` | `TextField` | Sí | Sinopsis local. |
-| `cover_url` | `URLField` | Sí | Portada vertical. |
-| `artwork_url` | `URLField` | Sí | Imagen horizontal o de fondo. |
-| `first_release_date` | `DateField` | Sí | Primera fecha de lanzamiento conocida. |
-| `igdb_main_story_hours` | `DecimalField` | Sí | Estimación Main Story importada. |
-| `genres` | `JSONField` | Sí | Géneros importados. |
-| `platforms` | `JSONField` | Sí | Plataformas importadas. |
-| `igdb_payload` | `JSONField` | Sí | Payload normalizado o relevante de IGDB. |
-| `igdb_synced_at` | `DateTimeField` | Sí | Último refresh explícito. |
-| `franchise` | `ForeignKey` | Sí | Franquicia manual opcional. |
-| `created_at` | `DateTimeField` | No | Fecha de creación local. |
-| `updated_at` | `DateTimeField` | No | Última modificación. |
+| `igdb_id` | `PositiveBigIntegerField` | Yes | Unique external IGDB identifier. |
+| `title` | `CharField` | No | Primary title. |
+| `title_japanese` | `CharField` | Yes | Optional Japanese title. |
+| `slug` | `SlugField` | No | Stable unique local identifier. |
+| `summary` | `TextField` | Yes | Locally stored synopsis. |
+| `cover_url` | `URLField` | Yes | Vertical cover. |
+| `artwork_url` | `URLField` | Yes | Horizontal artwork or background. |
+| `first_release_date` | `DateField` | Yes | Earliest known release date. |
+| `igdb_main_story_hours` | `DecimalField` | Yes | Imported Main Story estimate. |
+| `genres` | `JSONField` | Yes | Imported genres. |
+| `platforms` | `JSONField` | Yes | Imported platforms. |
+| `igdb_payload` | `JSONField` | Yes | Stored relevant IGDB payload. |
+| `igdb_synced_at` | `DateTimeField` | Yes | Last explicit metadata refresh. |
+| `franchise` | `ForeignKey` | Yes | Optional manual franchise. |
+| `created_at` | `DateTimeField` | No | Local creation timestamp. |
+| `updated_at` | `DateTimeField` | No | Last modification timestamp. |
 
-### Reglas
+### Rules
 
-- `igdb_id` es único cuando existe.
-- Se permiten juegos manuales sin `igdb_id`.
-- `slug` es único y estable.
-- `igdb_main_story_hours` debe ser positivo.
-- Solo se utiliza la estimación **Main Story**.
-- No se incorporan Main + Extra ni Completionist en el MVP.
-- Existe un índice por `title`.
-- La biblioteca carga desde PostgreSQL, no desde IGDB.
-- La franquicia puede asignarse durante la importación o desde Game Detail.
+- `igdb_id` is unique when present.
+- Manual games without an IGDB ID are allowed.
+- `slug` is unique and stable.
+- `igdb_main_story_hours` must be positive.
+- Only the IGDB **Main Story** estimate is used.
+- Main + Extra and Completionist estimates are outside the MVP.
+- `title` has a database index.
+- Library pages load from PostgreSQL, not from IGDB.
+- A franchise may be assigned during import or from Game Detail.
 
-### Importación local-first
+### Local-First Import
 
-IGDB se utiliza únicamente mediante acciones explícitas del owner:
+IGDB is used only through explicit owner actions:
 
 ```text
 Search
@@ -224,23 +245,25 @@ Refresh metadata
 Detect related content
 ```
 
-El importador puede:
+The importer can:
 
-- Vincular metadata a un juego local existente sin reemplazar su PK, slug, estado, accesos, playthroughs o notas.
-- Crear transaccionalmente un `Game`, `LibraryEntry` y `GameAccess`.
-- Asignar una franquicia existente durante el import.
-- Registrar Platinum, fecha de Platinum o Platinum Target.
-- Guardar payload y timestamp localmente.
+- Link IGDB metadata to an existing local game without replacing its PK, slug, status, accesses, playthroughs, or notes.
+- Transactionally create `Game`, `LibraryEntry`, and `GameAccess`.
+- Automatically create `Playthrough 1` when the initial status is Completed.
+- Store optional text language and completion date for that historical run.
+- Assign an existing franchise during import.
+- Store Platinum, Platinum date, or Platinum Target.
+- Persist the IGDB payload and local sync timestamp.
 
 ---
 
 ## 5. LibraryEntry
 
-`LibraryEntry` representa la relación personal con un videojuego.
+`LibraryEntry` represents the user's personal relationship with one game.
 
-Cada `Game` puede tener como máximo una entrada.
+Each `Game` can have at most one library entry.
 
-### Estados implementados
+### Implemented Statuses
 
 ```text
 playing
@@ -251,50 +274,50 @@ completed
 multiplayer
 ```
 
-### Campos implementados
+### Implemented Fields
 
-| Campo | Tipo | Nulo / vacío | Descripción |
+| Field | Type | Nullable / blank | Description |
 |---|---|---:|---|
-| `game` | `OneToOneField` | No | Juego asociado. |
-| `status` | `CharField` | Sí | Estado personal general. |
-| `has_platinum` | `BooleanField` | No | Platino obtenido. |
-| `platinum_earned_on` | `DateField` | Sí | Fecha opcional de obtención. |
-| `is_platinum_target` | `BooleanField` | No | Objetivo futuro de platino. |
-| `main_story_hours_override` | `DecimalField` | Sí | Duración manual. |
-| `notes` | `TextField` | Sí | Notas personales. |
-| `created_at` | `DateTimeField` | No | Fecha de incorporación. |
-| `updated_at` | `DateTimeField` | No | Último cambio. |
+| `game` | `OneToOneField` | No | Associated game. |
+| `status` | `CharField` | Yes | General personal status. |
+| `has_platinum` | `BooleanField` | No | Platinum unlocked. |
+| `platinum_earned_on` | `DateField` | Yes | Optional unlock date. |
+| `is_platinum_target` | `BooleanField` | No | Future platinum goal. |
+| `main_story_hours_override` | `DecimalField` | Yes | Manual duration override. |
+| `notes` | `TextField` | Yes | Personal notes. |
+| `created_at` | `DateTimeField` | No | Date added to the library. |
+| `updated_at` | `DateTimeField` | No | Last change. |
 
-### Reglas de estado
+### Status Rules
 
-- Sin playthroughs, el owner puede seleccionar estados manuales compatibles.
-- Playing y Paused requieren un playthrough.
-- Cuando existen playthroughs, el estado de biblioteca queda controlado por su historial.
-- Multiplayer no utiliza playthroughs.
-- Multiplayer debe conservar al menos un acceso Owned.
-- Multiplayer no utiliza duración Main Story manual.
+- Without playthroughs, the owner may select compatible manual statuses.
+- Playing and Paused require a playthrough.
+- Once playthroughs exist, library status is controlled by playthrough history.
+- Multiplayer entries do not use playthroughs.
+- Multiplayer entries must retain at least one Owned access.
+- Multiplayer entries do not use a manual Main Story duration.
 
-### Reglas de platino
+### Platinum Rules
 
-- El platino pertenece a `LibraryEntry`, no a `GameAccess`.
-- Un platino requiere al menos un acceso Owned.
-- `platinum_earned_on` requiere `has_platinum=True`.
-- Un juego con platino no puede permanecer como Platinum Target.
-- Al quitar el platino desde el formulario, su fecha se limpia.
-- Un juego poseído actualmente en PC puede marcarse como Platinum Target aunque el objetivo futuro sea conseguirlo en PS5.
-- El último acceso Owned no puede degradarse cuando la entrada conserva platino.
+- Platinum belongs to `LibraryEntry`, not `GameAccess`.
+- Platinum requires at least one Owned access.
+- `platinum_earned_on` requires `has_platinum=True`.
+- A game with an unlocked platinum cannot remain a Platinum Target.
+- Removing the platinum flag clears its date through the form workflow.
+- A game currently owned only on PC may still be marked as a future PS5 Platinum Target.
+- The final Owned access cannot be downgraded while the entry remains platinum-marked.
 
-### Duración efectiva
+### Effective Duration
 
 ```text
 main_story_hours_override
-        si existe
+        when present
 
 igdb_main_story_hours
-        en caso contrario
+        otherwise
 ```
 
-### Propiedades derivadas
+### Derived Properties
 
 ```python
 effective_main_story_hours
@@ -306,56 +329,56 @@ is_wishlisted
 
 ## 6. Platinum Collection
 
-El sistema de platino se apoya en `LibraryEntry`.
+The platinum system is based on `LibraryEntry`.
 
-Ruta:
+Route:
 
 ```text
 /games/platinum/
 ```
 
-La colección muestra:
+The collection includes:
 
-- Total de platinos.
-- Último platino con fecha conocida.
-- Historial agrupado por año.
-- Platinos con fecha desconocida.
+- Total platinum count.
+- Latest platinum with a known date.
+- History grouped by year.
+- Platinums with unknown dates.
 - Platinum Targets.
-- Portadas y navegación a Game Detail.
+- Covers and navigation to Game Detail.
 
-La biblioteca ofrece filtros para:
+Library filters include:
 
 ```text
 Platinum Unlocked
 Platinum Target
 ```
 
-Los platinos desbloqueados se ordenan por:
+Unlocked platinums are ordered by:
 
 ```text
-fecha de obtención más reciente
+newest known unlock date
         ↓
-fecha de obtención más antigua
+oldest known unlock date
         ↓
-fecha desconocida al final
+unknown dates last
 ```
 
 ---
 
 ## 7. GameAccess
 
-`GameAccess` representa dónde se posee o se desea adquirir un juego.
+`GameAccess` represents where a game is owned or where the user wants to acquire it.
 
-El juego no se duplica por plataforma.
+The game itself is not duplicated by platform.
 
-### Tipos
+### Access Types
 
 ```text
 owned
 wishlist
 ```
 
-### Plataformas implementadas
+### Implemented Platforms
 
 ```text
 pc
@@ -364,7 +387,7 @@ switch_2
 other
 ```
 
-### Tiendas implementadas
+### Implemented Stores
 
 ```text
 steam
@@ -372,24 +395,27 @@ epic_games
 playstation_store
 nintendo_eshop
 gog
+xbox
 other
 ```
 
-### Campos implementados
+`xbox` covers the Xbox ecosystem and Game Pass access used on PC.
 
-| Campo | Tipo | Nulo / vacío | Descripción |
+### Implemented Fields
+
+| Field | Type | Nullable / blank | Description |
 |---|---|---:|---|
-| `library_entry` | `ForeignKey` | No | Entrada personal asociada. |
-| `access_type` | `CharField` | No | Owned o Wishlist. |
-| `platform_name` | `CharField` | No | Plataforma. |
-| `store` | `CharField` | Sí | Tienda. |
-| `notes` | `TextField` | Sí | Contexto adicional. |
-| `created_at` | `DateTimeField` | No | Fecha de creación. |
-| `updated_at` | `DateTimeField` | No | Última modificación. |
+| `library_entry` | `ForeignKey` | No | Associated personal entry. |
+| `access_type` | `CharField` | No | Owned or Wishlist. |
+| `platform_name` | `CharField` | No | Platform. |
+| `store` | `CharField` | Yes | Store or ecosystem. |
+| `notes` | `TextField` | Yes | Additional context. |
+| `created_at` | `DateTimeField` | No | Creation timestamp. |
+| `updated_at` | `DateTimeField` | No | Last modification timestamp. |
 
-### Reglas
+### Rules
 
-Se evita duplicar exactamente:
+The following exact combination is unique:
 
 ```text
 library_entry
@@ -398,31 +424,31 @@ platform_name
 store
 ```
 
-Un juego puede tener:
+A game may have:
 
-- Varios accesos Owned.
-- Varios accesos Wishlist.
-- Owned y Wishlist en ubicaciones diferentes.
-- Owned y Wishlist en una misma plataforma cuando representan accesos distintos.
+- Several Owned accesses.
+- Several Wishlist accesses.
+- Owned and Wishlist accesses in different locations.
+- Owned and Wishlist entries on the same platform when they represent distinct access intentions.
 
-### Integridad histórica
+### Historical Integrity
 
-Un acceso usado por un playthrough:
+An access referenced by a playthrough:
 
-- No puede eliminarse.
-- Debe permanecer Owned.
-- Bloquea edición de tipo, plataforma y tienda.
-- Permite seguir editando sus notas.
+- Cannot be deleted.
+- Must remain Owned.
+- Locks access type, platform, and store.
+- Still allows note editing.
 
-Esta regla evita reescribir retroactivamente la plataforma histórica de un playthrough.
+This prevents retroactively rewriting the historical platform of a playthrough.
 
 ---
 
 ## 8. Playthrough
 
-`Playthrough` representa cada recorrido individual.
+`Playthrough` represents one individual run.
 
-### Estados
+### Statuses
 
 ```text
 playing
@@ -431,55 +457,58 @@ completed
 dropped
 ```
 
-### Idiomas de texto
+### Text Languages
 
 ```text
+unknown
 ja
 en
 es
 other
 ```
 
-Las voces no se registran en el MVP.
+`unknown` is displayed as **Unspecified** and supports historical runs whose original text language is not remembered.
 
-### Campos implementados
+Voice language is outside the MVP.
 
-| Campo | Tipo | Nulo / vacío | Descripción |
+### Implemented Fields
+
+| Field | Type | Nullable / blank | Description |
 |---|---|---:|---|
-| `library_entry` | `ForeignKey` | No | Entrada personal. |
-| `access` | `ForeignKey` | Sí | Acceso Owned utilizado. |
-| `number` | `PositiveIntegerField` | No | Número del recorrido. |
-| `status` | `CharField` | No | Estado del recorrido. |
-| `text_language` | `CharField` | No | Idioma principal del texto. |
-| `started_on` | `DateField` | Sí | Fecha de inicio. |
-| `finished_on` | `DateField` | Sí | Fecha de término. |
-| `progress_note` | `CharField` | Sí | Progreso manual libre. |
-| `hours_played` | `DecimalField` | Sí | Duración real opcional. |
-| `notes` | `TextField` | Sí | Contexto o impresiones. |
-| `created_at` | `DateTimeField` | No | Fecha de creación. |
-| `updated_at` | `DateTimeField` | No | Última modificación. |
+| `library_entry` | `ForeignKey` | No | Personal library entry. |
+| `access` | `ForeignKey` | Yes | Owned access used for this run. |
+| `number` | `PositiveIntegerField` | No | Sequential run number. |
+| `status` | `CharField` | No | Run status. |
+| `text_language` | `CharField` | No | Primary text language. |
+| `started_on` | `DateField` | Yes | Start date. |
+| `finished_on` | `DateField` | Yes | Completion date. |
+| `progress_note` | `CharField` | Yes | Free-form manual progress. |
+| `hours_played` | `DecimalField` | Yes | Optional real playtime. |
+| `notes` | `TextField` | Yes | Context or impressions. |
+| `created_at` | `DateTimeField` | No | Creation timestamp. |
+| `updated_at` | `DateTimeField` | No | Last modification timestamp. |
 
-### Reglas
+### Rules
 
-- `number` es único dentro de una `LibraryEntry`.
+- `number` is unique within one `LibraryEntry`.
 - `number >= 1`.
 - `finished_on >= started_on`.
-- `hours_played > 0` cuando existe.
-- El acceso debe pertenecer a la misma entrada.
-- El selector ofrece únicamente accesos Owned de esa entrada.
-- Un playthrough Playing o Paused no puede tener fecha de término.
-- Los juegos Multiplayer no aceptan playthroughs.
+- `hours_played > 0` when present.
+- The selected access must belong to the same library entry.
+- The selector only offers Owned accesses for that entry.
+- A Playing or Paused run cannot have a finish date.
+- Multiplayer entries do not accept playthroughs.
 
-### Creación y transiciones
+### Creation and State Transitions
 
-Al iniciar un nuevo playthrough:
+When a new playthrough starts:
 
-- Se asigna automáticamente el siguiente número.
-- Se usa la fecha local cuando no se entrega una explícita.
-- Otro playthrough activo de la misma entrada se pausa.
-- La `LibraryEntry` pasa a Playing.
+- The next number is assigned automatically.
+- The local date is used when no explicit date is provided.
+- Another active run from the same entry is paused.
+- The `LibraryEntry` becomes Playing.
 
-Las acciones disponibles son:
+Available actions:
 
 ```text
 pause
@@ -488,27 +517,45 @@ complete
 drop
 ```
 
-Las transiciones actualizan el playthrough y la entrada de biblioteca de forma coordinada.
+Transitions update the playthrough and library entry together.
 
-### Progreso válido
+### Completed Import and Historical Backfill
+
+When an IGDB import starts with Completed status:
+
+- `Playthrough 1` is created automatically.
+- The run is stored as Completed.
+- It uses the newly created Owned access.
+- Optional text language and completion date are preserved.
+- Unknown language defaults to Unspecified.
+
+Older entries marked Completed but missing playthrough history can be normalised with:
+
+```bash
+python manage.py backfill_completed_playthroughs --dry-run
+python manage.py backfill_completed_playthroughs
+```
+
+The command is idempotent, skips entries with existing playthroughs, and uses an available Owned access when one exists.
+
+### Valid Progress Examples
 
 ```text
 Chapter 7
 Act 2
 63%
 Main Story completed
-Historia principal terminada
 ```
 
-No existe porcentaje universal ni estimación automática de finalización.
+There is no universal progress percentage or automatic completion estimate.
 
 ---
 
 ## 9. GameContent
 
-`GameContent` registra contenido relacionado bajo una entrada sin inflar el total de juegos de la biblioteca.
+`GameContent` tracks related content under a library entry without increasing the total game count.
 
-### Tipos
+### Content Types
 
 ```text
 dlc
@@ -517,7 +564,7 @@ standalone_expansion
 other
 ```
 
-### Estados
+### Statuses
 
 ```text
 plan_to_play
@@ -527,34 +574,34 @@ completed
 dropped
 ```
 
-### Campos implementados
+### Implemented Fields
 
-| Campo | Tipo | Nulo / vacío | Descripción |
+| Field | Type | Nullable / blank | Description |
 |---|---|---:|---|
-| `library_entry` | `ForeignKey` | No | Juego padre en la biblioteca. |
-| `igdb_id` | `PositiveBigIntegerField` | Sí | ID externo único. |
-| `title` | `CharField` | No | Título del contenido. |
-| `content_type` | `CharField` | No | Tipo de contenido. |
-| `status` | `CharField` | No | Estado personal. |
-| `summary` | `TextField` | Sí | Sinopsis. |
-| `cover_url` | `URLField` | Sí | Portada. |
-| `first_release_date` | `DateField` | Sí | Fecha de lanzamiento. |
-| `completed_on` | `DateField` | Sí | Fecha opcional de término. |
-| `notes` | `TextField` | Sí | Notas personales. |
-| `igdb_payload` | `JSONField` | Sí | Payload almacenado. |
-| `created_at` | `DateTimeField` | No | Fecha de creación. |
-| `updated_at` | `DateTimeField` | No | Último cambio. |
+| `library_entry` | `ForeignKey` | No | Parent library game. |
+| `igdb_id` | `PositiveBigIntegerField` | Yes | Unique external ID. |
+| `title` | `CharField` | No | Content title. |
+| `content_type` | `CharField` | No | Content category. |
+| `status` | `CharField` | No | Personal status. |
+| `summary` | `TextField` | Yes | Synopsis. |
+| `cover_url` | `URLField` | Yes | Cover image. |
+| `first_release_date` | `DateField` | Yes | Release date. |
+| `completed_on` | `DateField` | Yes | Optional completion date. |
+| `notes` | `TextField` | Yes | Personal notes. |
+| `igdb_payload` | `JSONField` | Yes | Stored source payload. |
+| `created_at` | `DateTimeField` | No | Creation timestamp. |
+| `updated_at` | `DateTimeField` | No | Last modification timestamp. |
 
-### Reglas
+### Rules
 
-- `igdb_id` es único cuando existe.
-- El título es único dentro del mismo juego padre.
-- `completed_on` solo es válido con estado Completed.
-- Puede crearse manualmente.
-- Puede derivarse de contenido detectado en el payload IGDB.
-- El owner puede editarlo o eliminarlo.
+- `igdb_id` is unique when present.
+- The title is unique within the same parent game.
+- `completed_on` is only valid with Completed status.
+- Content may be created manually.
+- Content may be created from relations detected in the stored IGDB payload.
+- The owner can edit or delete tracked content.
 
-### Relaciones IGDB detectadas
+### Detected IGDB Relations
 
 ```text
 dlcs
@@ -563,57 +610,212 @@ standalone_expansions
 parent_game
 ```
 
-Una obra detectada puede:
+A detected work may be:
 
-- Registrarse como `GameContent`.
-- Revisarse como juego independiente.
-- Enlazar a un `Game` local ya importado cuando corresponde.
-
----
-
-## 10. Restricciones y validaciones
-
-### Restricciones de base de datos
-
-Se encuentran implementadas restricciones para:
-
-- `Game.igdb_id` único.
-- `Game.slug` único.
-- `Franchise.name` único.
-- `Franchise.slug` único.
-- Un `LibraryEntry` por `Game`.
-- Horas Main Story positivas.
-- Duración manual positiva.
-- Horas de playthrough positivas.
-- Número de playthrough positivo.
-- Número único por entrada.
-- Rango válido de fechas del playthrough.
-- Accesos exactos no duplicados.
-- Título de GameContent único dentro del padre.
-- Fecha de GameContent coherente con Completed.
-- Fecha de Platinum coherente con Platinum Unlocked.
-- Platinum Target incompatible con Platinum Unlocked.
-
-### Validación de formularios y servicios
-
-Se validan además:
-
-- Acceso del playthrough perteneciente a la misma entrada.
-- Playing y Paused dependientes de playthroughs.
-- Estados y fechas coherentes.
-- Multiplayer sin Main Story manual.
-- Multiplayer con acceso Owned.
-- Platinum con acceso Owned.
-- Conservación del último Owned de una entrada con Platinum.
-- Identidad histórica bloqueada para accesos en uso.
-- Eliminación de franquicia solo cuando está vacía.
-- URLs de logo válidas.
-- Asignación de franquicia a juegos existentes o importados.
-- Transiciones válidas de playthrough.
+- Tracked as `GameContent`.
+- Reviewed as a separate game.
+- Linked to an already imported local `Game`.
 
 ---
 
-## 11. Relaciones Django
+## 10. Competitive Rank Tracking
+
+Competitive Rank Tracking supports different game-specific ranking systems without requiring an external ranking API.
+
+The section lives inside Game Detail and is publicly readable. Configuration, editing, and rank updates require an authenticated owner.
+
+### 10.1 CompetitiveMode
+
+`CompetitiveMode` represents one competitive queue or mode.
+
+Examples:
+
+```text
+Rocket League
+├── 1V1
+├── 2V2
+└── 3V3
+
+Battlefield 6
+└── Ranked Battle Royale
+```
+
+| Field | Type | Nullable / blank | Description |
+|---|---|---:|---|
+| `library_entry` | `ForeignKey` | No | Game that owns the mode. |
+| `name` | `CharField` | No | Visible mode name. |
+| `display_order` | `PositiveIntegerField` | No | Visual ordering value. |
+| `is_active` | `BooleanField` | No | Whether new records may use the mode. |
+| `created_at` | `DateTimeField` | No | Creation timestamp. |
+| `updated_at` | `DateTimeField` | No | Last modification timestamp. |
+
+Rules:
+
+- Mode name is unique within one `LibraryEntry`.
+- Modes are ordered by `display_order` and name.
+- Archiving preserves all history.
+- Archived modes disappear from new-record forms.
+- A mode without history may be deleted.
+- A mode with history cannot be deleted and must be archived instead.
+
+### 10.2 CompetitiveRankTier
+
+`CompetitiveRankTier` defines the rank scale for one game.
+
+| Field | Type | Nullable / blank | Description |
+|---|---|---:|---|
+| `library_entry` | `ForeignKey` | No | Game that owns the rank scale. |
+| `name` | `CharField` | No | Rank name. |
+| `rank_order` | `PositiveIntegerField` | No | Ascending position in the scale. |
+| `uses_divisions` | `BooleanField` | No | Whether the rank has divisions. |
+| `division_count` | `PositiveSmallIntegerField` | Yes | Highest allowed division. |
+| `created_at` | `DateTimeField` | No | Creation timestamp. |
+| `updated_at` | `DateTimeField` | No | Last modification timestamp. |
+
+Rules:
+
+- Tier name is unique within the entry.
+- `rank_order` is unique within the entry.
+- A tier using divisions requires `division_count >= 1`.
+- A tier without divisions requires `division_count=None`.
+- A tier referenced by history cannot be deleted.
+- An unused tier may be edited or deleted.
+- The interface displays ranges as `Divisions I–IV` or `Divisions I–V`.
+
+### 10.3 CompetitiveRankRecord
+
+`CompetitiveRankRecord` represents one historical rank event.
+
+| Field | Type | Nullable / blank | Description |
+|---|---|---:|---|
+| `mode` | `ForeignKey` | No | Competitive mode. |
+| `rank_tier` | `ForeignKey` | No | Achieved rank. |
+| `division` | `PositiveSmallIntegerField` | Yes | Current division. |
+| `season` | `CharField` | Yes | Competitive season or cycle. |
+| `recorded_at` | `DateTimeField` | No | Exact date and time of the record. |
+| `notes` | `TextField` | Yes | Optional context. |
+| `created_at` | `DateTimeField` | No | Local creation timestamp. |
+| `updated_at` | `DateTimeField` | No | Last modification timestamp. |
+
+Rules:
+
+- Mode and tier must belong to the same `LibraryEntry`.
+- Division must be positive.
+- Division cannot exceed `division_count`.
+- A tier without divisions rejects division values.
+- Multiple updates may be recorded on the same day.
+- Records are ordered by descending `recorded_at`, then descending PK.
+- Current rank is always derived from the latest record.
+- Deleting the latest record automatically restores the previous record as current.
+- There is no separately stored `current_rank` field that can drift out of sync.
+
+### 10.4 Owner Management and Integrity
+
+The owner can:
+
+- Create, edit, archive, and delete eligible modes.
+- Create, edit, and delete eligible tiers.
+- Create, edit, and delete rank updates.
+- Correct season, timestamp, division, or notes.
+- Review full history by mode.
+
+Tier editing is lazy-loaded at the template level: all configured ranks remain visible, but only the selected tier receives a rendered edit form. This reduces HTML generation for large configurations such as Rocket League.
+
+### 10.5 Competitive Presets
+
+Known configurations can be installed through an idempotent management command:
+
+```bash
+python manage.py setup_competitive_presets \
+  --game "Rocket League" \
+  --preset rocket-league
+
+python manage.py setup_competitive_presets \
+  --game "Battlefield 6" \
+  --preset redsec
+```
+
+The command also supports `--dry-run`.
+
+Preset behaviour:
+
+- Creates only missing modes and tiers.
+- Recognises existing names without duplicating them.
+- Normalises preset ordering.
+- Preserves model IDs and rank history.
+- Can be run repeatedly.
+- Installs REDSEC inside Battlefield 6 rather than as an independent local game.
+
+Current preset structures:
+
+```text
+Rocket League
+├── 3 modes
+└── 23 tiers
+
+Battlefield 6 · REDSEC
+├── 1 mode
+└── 9 tiers
+```
+
+---
+
+## 11. Constraints and Validation
+
+### Database Constraints
+
+Implemented constraints include:
+
+- Unique `Game.igdb_id`.
+- Unique `Game.slug`.
+- Unique `Franchise.name`.
+- Unique `Franchise.slug`.
+- One `LibraryEntry` per `Game`.
+- Positive IGDB Main Story hours.
+- Positive manual duration override.
+- Positive playthrough hours.
+- Positive playthrough number.
+- Unique playthrough number per entry.
+- Valid playthrough date range.
+- No duplicate exact access location.
+- Unique GameContent title within its parent.
+- GameContent completion date only for Completed content.
+- Platinum date only when platinum is unlocked.
+- Platinum Target incompatible with unlocked platinum.
+- Unique competitive mode name per entry.
+- Unique rank tier name per entry.
+- Unique rank order per entry.
+- Valid division configuration.
+- Positive competitive record division.
+- Competitive record index by mode and timestamp.
+
+### Form and Service Validation
+
+The application additionally validates:
+
+- Playthrough access belongs to the same entry.
+- Playing and Paused depend on playthroughs.
+- Status and date consistency.
+- Multiplayer excludes manual Main Story duration.
+- Multiplayer requires an Owned access.
+- Platinum requires an Owned access.
+- The final Owned access of a platinum-marked game is preserved.
+- Historical access identity is locked while referenced by a playthrough.
+- Franchises can only be deleted when empty.
+- Franchise logo URLs must be valid.
+- Games may be assigned to franchises during import or later.
+- Playthrough state transitions must be valid.
+- Completed imports create historical playthroughs.
+- Backfill skips entries with existing history.
+- Competitive modes and tiers must belong to the same game.
+- Division cannot exceed the tier limit.
+- Archived modes cannot receive new rank records.
+- Competitive history protects referenced modes and tiers from deletion.
+- Mutating actions are owner-only and POST-only.
+
+---
+
+## 12. Django Relationships
 
 ```text
 Franchise.games
@@ -622,160 +824,163 @@ Game.franchise
 LibraryEntry.accesses
 LibraryEntry.playthroughs
 LibraryEntry.additional_contents
+LibraryEntry.competitive_modes
+LibraryEntry.competitive_rank_tiers
 GameAccess.playthroughs
 Playthrough.library_entry
 Playthrough.access
 GameContent.library_entry
+CompetitiveMode.library_entry
+CompetitiveMode.rank_records
+CompetitiveRankTier.library_entry
+CompetitiveRankTier.rank_records
+CompetitiveRankRecord.mode
+CompetitiveRankRecord.rank_tier
 ```
 
 ---
 
-## 12. Flujos principales
+## 13. Main Workflows
 
-### Importar un juego desde IGDB
+### Import a Game from IGDB
 
 ```text
-Buscar en IGDB
+Search IGDB
         ↓
-Revisar título o edición
+Review title and edition
         ↓
-Elegir estado y franquicia opcional
+Choose status and optional franchise
         ↓
-Elegir acceso inicial
+Choose initial access
         ↓
-Guardar Game localmente
+Store Game locally
         ↓
-Crear LibraryEntry
+Create LibraryEntry
         ↓
-Crear GameAccess
+Create GameAccess
+        ↓
+When status is Completed:
+create completed Playthrough 1
 ```
 
-### Vincular un juego local
+### Link an Existing Local Game
 
 ```text
-Seleccionar resultado IGDB
+Select IGDB result
         ↓
-Elegir Game local sin IGDB
+Select local Game without IGDB link
         ↓
-Actualizar metadata del Game
+Update Game metadata
         ↓
-Conservar PK, slug, LibraryEntry,
-accesos, playthroughs, estado y notas
+Preserve PK, slug, LibraryEntry,
+accesses, playthroughs, status, and notes
 ```
 
-### Administrar una franquicia
+### Manage a Franchise
 
 ```text
-Crear Franchise
+Create Franchise
         ↓
-Agregar descripción y logo opcional
+Add description and optional logo
         ↓
-Asignar juegos desde Game Detail
-o durante importación
+Assign games from Game Detail
+or during import
         ↓
-Consultar progreso y timeline
+Review progress and release timeline
         ↓
-Mover o retirar juegos cuando sea necesario
+Move or remove games when needed
 ```
 
-### Registrar un playthrough
+### Record a Playthrough
 
 ```text
-Abrir Game Detail
+Open Game Detail
         ↓
-Seleccionar acceso Owned
+Select Owned access
         ↓
-Crear Playthrough
+Create Playthrough
         ↓
-Asignar número automático
+Assign next number automatically
         ↓
-Indicar idioma y fecha
+Set language and date
         ↓
-Actualizar progreso y estado
+Update progress and state
 ```
 
-### Registrar contenido adicional
+### Track Additional Content
 
 ```text
-Abrir Game Detail
+Open Game Detail
         ↓
-Revisar contenido detectado por IGDB
+Review IGDB-detected content
         ↓
 Track Under This Game
-o
+or
 Review as Separate Game
 ```
 
----
-
-## 13. Métricas actuales y futuras
-
-### Implementadas
-
-- Total de biblioteca.
-- Owned.
-- Wishlist.
-- Completed.
-- Plan to Play.
-- Multiplayer.
-- Platinum.
-- Progreso por franquicia.
-- Owned por franquicia.
-- Completed por franquicia.
-- Platinum por franquicia.
-- Último Platinum.
-- Historial de Platinum por año.
-- Platinum Targets.
-- Replay-aware completion.
-
-### Posteriores al MVP
-
-- Tiempo real por juego y franquicia.
-- Diferencia entre tiempo estimado y real.
-- Distribución por idioma.
-- Analítica avanzada por plataforma y tienda.
-- Tendencias temporales conectadas con Hibi Log.
-
----
-
-## 14. Competitive Rank Tracking pendiente
-
-El último gran sistema funcional del MVP será el seguimiento competitivo manual.
-
-Debe permitir configuraciones específicas por juego.
-
-Ejemplo Rocket League:
+### Record a Competitive Rank
 
 ```text
-1v1
-2v2
-3v3
+Configure mode
+        ↓
+Configure rank tiers
+        ↓
+Record rank, division,
+season, and timestamp
+        ↓
+Derive current rank
+from the latest event
 ```
-
-Cada modo podrá registrar:
-
-- Temporada.
-- Rango.
-- División.
-- Fecha y hora.
-- Múltiples movimientos el mismo día.
-- Rango actual derivado del último evento.
-- Historial de subidas y bajadas.
-
-Battlefield y otros juegos reutilizarán la infraestructura, pero no compartirán necesariamente modos, rangos ni divisiones.
 
 ---
 
-## 15. Integración futura con Hibi Log
+## 14. Current and Future Metrics
 
-Hibi Log podrá relacionar actividad con:
+### Implemented
+
+- Total library count.
+- Owned count.
+- Wishlist count.
+- Completed count.
+- Plan to Play count.
+- Multiplayer count.
+- Platinum count.
+- Franchise progress.
+- Owned games per franchise.
+- Completed games per franchise.
+- Platinums per franchise.
+- Latest platinum.
+- Platinum history by year.
+- Platinum Targets.
+- Replay-aware completion.
+- Current rank per competitive mode.
+- Competitive mode and update counts.
+- Rank history per mode.
+
+### Post-MVP
+
+- Real playtime per game and franchise.
+- Estimated-versus-real duration comparisons.
+- Text-language distribution.
+- Advanced platform and store analytics.
+- Competitive trend comparisons.
+- Time-series activity connected to Hibi Log.
+
+---
+
+## 15. Future Hibi Log Integration
+
+Hibi Log may relate activity to:
 
 - `LibraryEntry`.
 - `Playthrough`.
-- `GameAccess` cuando aporte contexto.
-- `GameContent` cuando la sesión corresponda a DLC o expansión.
+- `GameAccess` when platform context matters.
+- `GameContent` when the session belongs to a DLC or expansion.
+- `CompetitiveMode` when the session belongs to a ranked queue.
+- `CompetitiveRankRecord` when a session ends with a rank change.
 
-Ejemplo conceptual:
+Conceptual example:
 
 ```text
 ActivitySession
@@ -784,43 +989,45 @@ playthrough: Playthrough 2
 duration_minutes: 95
 progress_from: Chapter 6
 progress_to: Chapter 7
-notes: Sesión de historia principal en japonés
+notes: Main-story session in Japanese
 ```
 
-Game Kiroku ya expone identificadores estables para permitir esta integración futura.
+Game Kiroku already exposes stable identifiers for this future integration.
 
 ---
 
-## 16. Decisiones fuera del MVP
+## 16. Decisions Outside the MVP
 
-No se incluyen dentro del MVP:
+The MVP intentionally excludes:
 
-- Main + Extra y Completionist.
-- Voces o doblaje por playthrough.
-- Porcentaje universal de progreso.
-- Estimación automática de finalización.
-- Trofeos individuales.
-- Logros de Steam.
-- Distinción física, digital o suscripción.
-- Múltiples usuarios.
-- Sincronización permanente con IGDB.
-- Duplicación del juego por plataforma.
-- Relaciones de franquicia importadas automáticamente.
-- APIs externas de ranking competitivo.
-- Duración y playthroughs independientes para cada DLC.
+- Main + Extra and Completionist duration variants.
+- Voice-language tracking per playthrough.
+- Universal progress percentage.
+- Automatic completion estimates.
+- Individual trophies.
+- Steam achievements.
+- Physical, digital, or subscription ownership distinctions.
+- Multiple users.
+- Permanent background IGDB synchronisation.
+- Duplicating a game by platform.
+- Automatically imported franchise relationships.
+- External competitive-ranking APIs.
+- Automatic rank synchronisation.
+- Independent playthrough and duration systems for every DLC.
+- Full deletion of complex library entries with history.
 
 ---
 
-## 17. Estado de implementación
+## 17. Implementation Status
 
 ```text
-Documento: game-kiroku-data-model.md
-Módulo: Game Kiroku
-Etapa: MVP — cierre funcional
-Estado: Implementado y aprobado hasta Franchise Views
-Migración actual: games.0007_franchise_logo_url
-Pruebas globales: 126 OK
-Próximo bloque: Competitive Rank Tracking
+Document: game-kiroku-data-model.md
+Module: Game Kiroku
+Stage: MVP
+Status: Complete and approved
+Current migration: games.0011
+Global tests: 158 OK
+Next main module: Watchroom
 ```
 
-Las migraciones ya fueron creadas y aplicadas. Este documento debe actualizarse nuevamente al incorporar los modelos de Competitive Rank Tracking y al declarar el MVP completo.
+All MVP migrations have been created and applied. The architecture is now closed for the Watchroom phase and for later integration with Hibi Log.
