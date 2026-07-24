@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import F, Q
+from django.utils import timezone
 from django.utils.text import slugify
 from django.urls import reverse
 
@@ -708,3 +709,330 @@ class Playthrough(models.Model):
             f"Playthrough {self.number} · "
             f"{self.get_text_language_display()}"
         )
+
+
+
+class CompetitiveMode(models.Model):
+    library_entry = models.ForeignKey(
+        LibraryEntry,
+        related_name="competitive_modes",
+        on_delete=models.CASCADE,
+    )
+
+    name = models.CharField(
+        max_length=80,
+    )
+
+    display_order = models.PositiveIntegerField(
+        default=0,
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = [
+            "display_order",
+            "name",
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "library_entry",
+                    "name",
+                ],
+                name="games_comp_mode_unique_name",
+            ),
+        ]
+
+    @property
+    def current_rank_record(self):
+        return (
+            self.rank_records
+            .select_related(
+                "rank_tier",
+            )
+            .order_by(
+                "-recorded_at",
+                "-pk",
+            )
+            .first()
+        )
+
+    def __str__(self):
+        return (
+            f"{self.library_entry.game.title} · "
+            f"{self.name}"
+        )
+
+
+class CompetitiveRankTier(models.Model):
+    library_entry = models.ForeignKey(
+        LibraryEntry,
+        related_name="competitive_rank_tiers",
+        on_delete=models.CASCADE,
+    )
+
+    name = models.CharField(
+        max_length=80,
+    )
+
+    rank_order = models.PositiveIntegerField()
+
+    uses_divisions = models.BooleanField(
+        default=True,
+    )
+
+    division_count = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = [
+            "rank_order",
+            "name",
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "library_entry",
+                    "name",
+                ],
+                name="games_comp_tier_unique_name",
+            ),
+            models.UniqueConstraint(
+                fields=[
+                    "library_entry",
+                    "rank_order",
+                ],
+                name="games_comp_tier_unique_order",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    (
+                        Q(uses_divisions=True)
+                        & Q(division_count__gte=1)
+                    )
+                    | (
+                        Q(uses_divisions=False)
+                        & Q(division_count__isnull=True)
+                    )
+                ),
+                name="games_comp_tier_division_config",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+
+        errors = {}
+
+        if (
+            self.uses_divisions
+            and self.division_count is None
+        ):
+            errors["division_count"] = (
+                "Enter how many divisions this rank uses."
+            )
+
+        if (
+            not self.uses_divisions
+            and self.division_count is not None
+        ):
+            errors["division_count"] = (
+                "A rank without divisions cannot define "
+                "a division count."
+            )
+
+        if errors:
+            raise ValidationError(errors)
+
+    @property
+    def division_range_display(self):
+        roman_divisions = {
+            1: "I",
+            2: "II",
+            3: "III",
+            4: "IV",
+            5: "V",
+        }
+
+        if not self.uses_divisions:
+            return ""
+
+        highest_division = roman_divisions.get(
+            self.division_count,
+            str(self.division_count),
+        )
+
+        return f"Divisions I–{highest_division}"
+
+    def __str__(self):
+        return (
+            f"{self.library_entry.game.title} · "
+            f"{self.name}"
+        )
+
+
+class CompetitiveRankRecord(models.Model):
+    mode = models.ForeignKey(
+        CompetitiveMode,
+        related_name="rank_records",
+        on_delete=models.CASCADE,
+    )
+
+    rank_tier = models.ForeignKey(
+        CompetitiveRankTier,
+        related_name="rank_records",
+        on_delete=models.CASCADE,
+    )
+
+    division = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+    )
+
+    season = models.CharField(
+        max_length=80,
+        blank=True,
+    )
+
+    recorded_at = models.DateTimeField(
+        default=timezone.now,
+        db_index=True,
+    )
+
+    notes = models.TextField(
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = [
+            "-recorded_at",
+            "-pk",
+        ]
+
+        indexes = [
+            models.Index(
+                fields=[
+                    "mode",
+                    "recorded_at",
+                ],
+                name="games_rank_mode_time_idx",
+            ),
+        ]
+
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(division__isnull=True)
+                    | Q(division__gte=1)
+                ),
+                name="games_rank_division_positive",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+
+        errors = {}
+
+        if (
+            self.mode_id
+            and self.rank_tier_id
+            and (
+                self.mode.library_entry_id
+                != self.rank_tier.library_entry_id
+            )
+        ):
+            errors["rank_tier"] = (
+                "The selected rank tier must belong "
+                "to the same game as the mode."
+            )
+
+        if (
+            self.division is not None
+            and self.rank_tier_id
+            and not self.rank_tier.uses_divisions
+        ):
+            errors["division"] = (
+                "This rank tier does not use divisions."
+            )
+
+        if (
+            self.division is not None
+            and self.rank_tier_id
+            and self.rank_tier.division_count is not None
+            and self.division
+            > self.rank_tier.division_count
+        ):
+            errors["division"] = (
+                "Division cannot be greater than "
+                f"{self.rank_tier.division_count} "
+                "for this rank."
+            )
+
+        if errors:
+            raise ValidationError(errors)
+
+    @property
+    def division_display(self):
+        roman_divisions = {
+            1: "I",
+            2: "II",
+            3: "III",
+            4: "IV",
+            5: "V",
+        }
+
+        if self.division is None:
+            return ""
+
+        return roman_divisions.get(
+            self.division,
+            str(self.division),
+        )
+
+
+    def __str__(self):
+        division = (
+            f" · Division {self.division_display}"
+            if self.division is not None
+            else ""
+        )
+
+        return (
+            f"{self.mode} · "
+            f"{self.rank_tier.name}"
+            f"{division}"
+        )
+
+

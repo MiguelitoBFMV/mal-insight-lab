@@ -8,6 +8,9 @@ from django.views.decorators.http import require_POST
 from django.http import HttpResponseBadRequest
 
 from games.forms import (
+    CompetitiveModeOwnerForm,
+    CompetitiveRankRecordOwnerForm,
+    CompetitiveRankTierOwnerForm,
     GameAccessOwnerForm,
     GameContentOwnerForm,
     GameFranchiseOwnerForm,
@@ -17,6 +20,9 @@ from games.forms import (
     PlaythroughOwnerForm,
 )
 from games.models import (
+    CompetitiveMode,
+    CompetitiveRankRecord,
+    CompetitiveRankTier,
     Game,
     GameAccess,
     GameContent,
@@ -277,6 +283,51 @@ def _detail_entries():
                 to_attr="detail_accesses",
             ),
             Prefetch(
+                "competitive_modes",
+                queryset=(
+                    CompetitiveMode.objects
+                    .prefetch_related(
+                        Prefetch(
+                            "rank_records",
+                            queryset=(
+                                CompetitiveRankRecord
+                                .objects
+                                .select_related(
+                                    "rank_tier",
+                                )
+                                .order_by(
+                                    "-recorded_at",
+                                    "-pk",
+                                )
+                            ),
+                            to_attr=(
+                                "detail_rank_records"
+                            ),
+                        )
+                    )
+                    .order_by(
+                        "display_order",
+                        "name",
+                    )
+                ),
+                to_attr=(
+                    "detail_competitive_modes"
+                ),
+            ),
+            Prefetch(
+                "competitive_rank_tiers",
+                queryset=(
+                    CompetitiveRankTier.objects
+                    .order_by(
+                        "rank_order",
+                        "name",
+                    )
+                ),
+                to_attr=(
+                    "detail_competitive_rank_tiers"
+                ),
+            ),
+            Prefetch(
                 "playthroughs",
                 queryset=(
                     Playthrough.objects
@@ -329,6 +380,17 @@ def _build_detail_context(
     detected_content_id=None,
     access_action_error=None,
     access_action_id=None,
+    competitive_mode_form=None,
+    competitive_tier_form=None,
+    competitive_record_form=None,
+    competitive_record_update_form=None,
+    competitive_mode_update_form=None,
+    competitive_tier_update_form=None,
+    competitive_mode_action_error=None,
+    competitive_mode_action_id=None,
+    competitive_tier_action_error=None,
+    competitive_tier_action_id=None,
+    competitive_tier_manage_id=None,
 ):
     current_playthrough = next(
         (
@@ -490,6 +552,129 @@ def _build_detail_context(
                 },
             )
 
+    for mode in entry.detail_competitive_modes:
+        mode.current_record = (
+            mode.detail_rank_records[0]
+            if mode.detail_rank_records
+            else None
+        )
+
+        if (
+            competitive_mode_update_form
+            is not None
+            and mode.pk
+            == competitive_mode_update_form.instance.pk
+        ):
+            mode.owner_form = (
+                competitive_mode_update_form
+            )
+        else:
+            mode.owner_form = (
+                CompetitiveModeOwnerForm(
+                    instance=mode,
+                    library_entry=entry,
+                    prefix=(
+                        f"competitive-mode-"
+                        f"{mode.pk}"
+                    ),
+                )
+            )
+
+        for record in mode.detail_rank_records:
+            if (
+                competitive_record_update_form
+                is not None
+                and record.pk
+                == competitive_record_update_form.instance.pk
+            ):
+                record.owner_form = (
+                    competitive_record_update_form
+                )
+            else:
+                record.owner_form = (
+                    CompetitiveRankRecordOwnerForm(
+                        instance=record,
+                        library_entry=entry,
+                        prefix=(
+                            f"competitive-record-"
+                            f"{record.pk}"
+                        ),
+                    )
+                )
+
+    selected_competitive_tier_id = (
+        competitive_tier_manage_id
+    )
+
+    if competitive_tier_update_form is not None:
+        selected_competitive_tier_id = (
+            competitive_tier_update_form
+            .instance
+            .pk
+        )
+    elif competitive_tier_action_id is not None:
+        selected_competitive_tier_id = (
+            competitive_tier_action_id
+        )
+
+    for tier in entry.detail_competitive_rank_tiers:
+        tier.is_managed = (
+            tier.pk
+            == selected_competitive_tier_id
+        )
+        tier.owner_form = None
+
+        if not tier.is_managed:
+            continue
+
+        if (
+            competitive_tier_update_form
+            is not None
+            and tier.pk
+            == competitive_tier_update_form
+            .instance
+            .pk
+        ):
+            tier.owner_form = (
+                competitive_tier_update_form
+            )
+        else:
+            tier.owner_form = (
+                CompetitiveRankTierOwnerForm(
+                    instance=tier,
+                    library_entry=entry,
+                    prefix=(
+                        f"competitive-tier-"
+                        f"{tier.pk}"
+                    ),
+                )
+            )        
+
+    if competitive_mode_form is None:
+        competitive_mode_form = (
+            CompetitiveModeOwnerForm(
+                library_entry=entry,
+                prefix="new-competitive-mode",
+            )
+        )
+
+    if competitive_tier_form is None:
+        competitive_tier_form = (
+            CompetitiveRankTierOwnerForm(
+                library_entry=entry,
+                prefix="new-competitive-tier",
+            )
+        )
+
+    if competitive_record_form is None:
+        competitive_record_form = (
+            CompetitiveRankRecordOwnerForm(
+                library_entry=entry,
+                prefix="new-competitive-record",
+            )
+        )
+
+
     return {
         "active_page": "library",
         "entry": entry,
@@ -508,16 +693,82 @@ def _build_detail_context(
         "tracked_content_count": len(
             entry.detail_additional_contents
         ),
+        "competitive_modes": (
+            entry.detail_competitive_modes
+        ),
+        "competitive_rank_tiers": (
+            entry.detail_competitive_rank_tiers
+        ),
+        "competitive_mode_form": (
+            competitive_mode_form
+        ),
+        "competitive_tier_form": (
+            competitive_tier_form
+        ),
+        "competitive_record_form": (
+            competitive_record_form
+        ),
+        "competitive_mode_count": len(
+            entry.detail_competitive_modes
+        ),
+        "competitive_record_count": sum(
+            len(mode.detail_rank_records)
+            for mode
+            in entry.detail_competitive_modes
+        ),
+        "competitive_mode_action_error": (
+            competitive_mode_action_error
+        ),
+        "competitive_mode_action_id": (
+            competitive_mode_action_id
+        ),
+        "competitive_tier_action_error": (
+            competitive_tier_action_error
+        ),
+        "competitive_tier_action_id": (
+            competitive_tier_action_id
+        ),
+        "managed_competitive_tier_id": (
+            selected_competitive_tier_id
+        ),
     }
 
 
 def detail(request, slug):
     entry = _get_detail_entry(slug)
 
+    requested_tier_id = request.GET.get(
+        "manage_tier"
+    )
+
+    try:
+        requested_tier_id = int(
+            requested_tier_id
+        )
+    except (
+        TypeError,
+        ValueError,
+    ):
+        requested_tier_id = None
+
+    valid_tier_ids = {
+        tier.pk
+        for tier
+        in entry.detail_competitive_rank_tiers
+    }
+
+    if requested_tier_id not in valid_tier_ids:
+        requested_tier_id = None
+
     return render(
         request,
         "games/detail.html",
-        _build_detail_context(entry),
+        _build_detail_context(
+            entry,
+            competitive_tier_manage_id=(
+                requested_tier_id
+            ),
+        ),
     )
 
 
@@ -1076,4 +1327,323 @@ def delete_content(
     return redirect(
         entry.game.get_absolute_url()
     )
+
+
+@login_required
+@require_POST
+def create_competitive_mode(
+    request,
+    slug,
+):
+    entry = _get_detail_entry(slug)
+
+    form = CompetitiveModeOwnerForm(
+        request.POST,
+        library_entry=entry,
+        prefix="new-competitive-mode",
+    )
+
+    if form.is_valid():
+        form.save()
+
+        return redirect(
+            entry.game.get_absolute_url()
+        )
+
+    return render(
+        request,
+        "games/detail.html",
+        _build_detail_context(
+            entry,
+            competitive_mode_form=form,
+        ),
+    )
+
+
+@login_required
+@require_POST
+def create_competitive_tier(
+    request,
+    slug,
+):
+    entry = _get_detail_entry(slug)
+
+    form = CompetitiveRankTierOwnerForm(
+        request.POST,
+        library_entry=entry,
+        prefix="new-competitive-tier",
+    )
+
+    if form.is_valid():
+        form.save()
+
+        return redirect(
+            entry.game.get_absolute_url()
+        )
+
+    return render(
+        request,
+        "games/detail.html",
+        _build_detail_context(
+            entry,
+            competitive_tier_form=form,
+        ),
+    )
+
+
+@login_required
+@require_POST
+def create_competitive_record(
+    request,
+    slug,
+):
+    entry = _get_detail_entry(slug)
+
+    form = CompetitiveRankRecordOwnerForm(
+        request.POST,
+        library_entry=entry,
+        prefix="new-competitive-record",
+    )
+
+    if form.is_valid():
+        form.save()
+
+        return redirect(
+            entry.game.get_absolute_url()
+        )
+
+    return render(
+        request,
+        "games/detail.html",
+        _build_detail_context(
+            entry,
+            competitive_record_form=form,
+        ),
+    )
+
+
+@login_required
+@require_POST
+def update_competitive_record(
+    request,
+    slug,
+    record_id,
+):
+    entry = _get_detail_entry(slug)
+
+    record = get_object_or_404(
+        CompetitiveRankRecord.objects
+        .select_related(
+            "mode",
+            "rank_tier",
+        ),
+        pk=record_id,
+        mode__library_entry=entry,
+    )
+
+    form = CompetitiveRankRecordOwnerForm(
+        request.POST,
+        instance=record,
+        library_entry=entry,
+        prefix=(
+            f"competitive-record-"
+            f"{record.pk}"
+        ),
+    )
+
+    if form.is_valid():
+        form.save()
+
+        return redirect(
+            entry.game.get_absolute_url()
+        )
+
+    return render(
+        request,
+        "games/detail.html",
+        _build_detail_context(
+            entry,
+            competitive_record_update_form=form,
+        ),
+    )
+
+
+@login_required
+@require_POST
+def delete_competitive_record(
+    request,
+    slug,
+    record_id,
+):
+    entry = _get_detail_entry(slug)
+
+    record = get_object_or_404(
+        CompetitiveRankRecord,
+        pk=record_id,
+        mode__library_entry=entry,
+    )
+
+    record.delete()
+
+    return redirect(
+        entry.game.get_absolute_url()
+    )
+
+
+@login_required
+@require_POST
+def update_competitive_mode(
+    request,
+    slug,
+    mode_id,
+):
+    entry = _get_detail_entry(slug)
+
+    mode = get_object_or_404(
+        CompetitiveMode,
+        pk=mode_id,
+        library_entry=entry,
+    )
+
+    form = CompetitiveModeOwnerForm(
+        request.POST,
+        instance=mode,
+        library_entry=entry,
+        prefix=(
+            f"competitive-mode-"
+            f"{mode.pk}"
+        ),
+    )
+
+    if form.is_valid():
+        form.save()
+
+        return redirect(
+            entry.game.get_absolute_url()
+        )
+
+    return render(
+        request,
+        "games/detail.html",
+        _build_detail_context(
+            entry,
+            competitive_mode_update_form=form,
+        ),
+    )
+
+
+@login_required
+@require_POST
+def delete_competitive_mode(
+    request,
+    slug,
+    mode_id,
+):
+    entry = _get_detail_entry(slug)
+
+    mode = get_object_or_404(
+        CompetitiveMode,
+        pk=mode_id,
+        library_entry=entry,
+    )
+
+    if mode.rank_records.exists():
+        return render(
+            request,
+            "games/detail.html",
+            _build_detail_context(
+                entry,
+                competitive_mode_action_error=(
+                    "This mode has rank history and "
+                    "cannot be deleted. Archive it "
+                    "by disabling Active instead."
+                ),
+                competitive_mode_action_id=mode.pk,
+            ),
+        )
+
+    mode.delete()
+
+    return redirect(
+        entry.game.get_absolute_url()
+    )
+
+
+@login_required
+@require_POST
+def update_competitive_tier(
+    request,
+    slug,
+    tier_id,
+):
+    entry = _get_detail_entry(slug)
+
+    tier = get_object_or_404(
+        CompetitiveRankTier,
+        pk=tier_id,
+        library_entry=entry,
+    )
+
+    form = CompetitiveRankTierOwnerForm(
+        request.POST,
+        instance=tier,
+        library_entry=entry,
+        prefix=(
+            f"competitive-tier-"
+            f"{tier.pk}"
+        ),
+    )
+
+    if form.is_valid():
+        form.save()
+
+        return redirect(
+            entry.game.get_absolute_url()
+        )
+
+    return render(
+        request,
+        "games/detail.html",
+        _build_detail_context(
+            entry,
+            competitive_tier_update_form=form,
+        ),
+    )
+
+
+@login_required
+@require_POST
+def delete_competitive_tier(
+    request,
+    slug,
+    tier_id,
+):
+    entry = _get_detail_entry(slug)
+
+    tier = get_object_or_404(
+        CompetitiveRankTier,
+        pk=tier_id,
+        library_entry=entry,
+    )
+
+    if tier.rank_records.exists():
+        return render(
+            request,
+            "games/detail.html",
+            _build_detail_context(
+                entry,
+                competitive_tier_action_error=(
+                    "This rank is used by the history "
+                    "and cannot be deleted."
+                ),
+                competitive_tier_action_id=tier.pk,
+            ),
+        )
+
+    tier.delete()
+
+    return redirect(
+        entry.game.get_absolute_url()
+    )
+
 
